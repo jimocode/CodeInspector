@@ -3,10 +3,9 @@ package com.emyiqing;
 import com.beust.jcommander.JCommander;
 import com.emyiqing.config.Command;
 import com.emyiqing.config.Logo;
-import com.emyiqing.core.ClassResource;
-import com.emyiqing.core.ClassResourceUtil;
-import com.emyiqing.util.FileUtil;
+import com.emyiqing.model.ClassFile;
 import com.emyiqing.util.JarUtil;
+import com.emyiqing.util.RtUtil;
 import org.apache.log4j.Logger;
 
 import java.util.List;
@@ -23,8 +22,16 @@ public class Main {
         if (command.help) {
             jc.usage();
         }
-        ClassLoader classLoader = JarUtil.resolveNormalJarFile(command.files);
-        ClassResourceUtil classResourceUtil = new ClassResourceUtil(classLoader);
-        List<ClassResource> cls = classResourceUtil.getAllClasses();
+        if (command.jars != null && command.jars.size() != 0) {
+            List<ClassFile> classFileList = RtUtil.getAllClassesFromJars(command.jars);
+            System.out.println(classFileList.size());
+        }
+        if (command.boots != null && command.boots.size() != 0) {
+            List<ClassFile> crs = JarUtil.resolveSpringBootJarFile(command.boots.get(0));
+            for (ClassFile classFile : crs) {
+                System.out.println(classFile.getClassName());
+            }
+            System.out.println(crs.size());
+        }
     }
 }

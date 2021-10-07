@@ -1,92 +1,112 @@
 package com.emyiqing.util;
 
+import com.emyiqing.model.ClassFile;
 import org.apache.log4j.Logger;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLClassLoader;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
 
 public class JarUtil {
     private static final Logger logger = Logger.getLogger(JarUtil.class);
+    private static final Set<ClassFile> classFileSet= new HashSet<>();
 
-    /**
-     * write classes and get all jars
-     * @param jarPath springboot jar path
-     * @return url classloader
-     */
-    public static ClassLoader resolveSpringBootJarFile(String jarPath) {
+    public static List<ClassFile> resolveSpringBootJarFile(String jarPath) {
         try {
-            final Path tmpDir = Files.createTempDirectory("exploded-jar");
+            final Path tmpDir = Files.createTempDirectory(UUID.randomUUID().toString());
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                DirUtil.removeDir(new File(String.valueOf(tmpDir)));
+                closeAll();
+                DirUtil.removeDir(tmpDir.toFile());
             }));
+            resolve(jarPath, tmpDir);
+            resolveBoot(jarPath, tmpDir);
+            Files.list(tmpDir.resolve("BOOT-INF/lib")).forEach(p -> {
+                resolveNormalJarFile(p.toFile().getAbsolutePath());
+            });
+            return new ArrayList<>(classFileSet);
+        } catch (Exception e) {
+            logger.error("error ", e);
+        }
+        return new ArrayList<>();
+    }
+
+    public static List<ClassFile> resolveNormalJarFile(String jarPath) {
+        try {
+            final Path tmpDir = Files.createTempDirectory(UUID.randomUUID().toString());
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                closeAll();
+                DirUtil.removeDir(tmpDir.toFile());
+            }));
+            resolve(jarPath, tmpDir);
+            return new ArrayList<>(classFileSet);
+        } catch (Exception e) {
+            logger.error("error ", e);
+        }
+        return new ArrayList<>();
+    }
+
+    private static void resolve(String jarPath, Path tmpDir) {
+        try {
             InputStream is = new FileInputStream(jarPath);
             JarInputStream jarInputStream = new JarInputStream(is);
             JarEntry jarEntry;
             while ((jarEntry = jarInputStream.getNextJarEntry()) != null) {
                 Path fullPath = tmpDir.resolve(jarEntry.getName());
                 if (!jarEntry.isDirectory()) {
+                    if (!jarEntry.getName().endsWith(".class")) {
+                        continue;
+                    }
                     Path dirName = fullPath.getParent();
                     if (!Files.exists(dirName)) {
                         Files.createDirectories(dirName);
                     }
-                    // write file
-                    try (OutputStream outputStream = Files.newOutputStream(fullPath)) {
-                        IOUtil.copy(jarInputStream, outputStream);
-                    }
+                    OutputStream outputStream = Files.newOutputStream(fullPath);
+                    IOUtil.copy(jarInputStream, outputStream);
+                    InputStream fis = new FileInputStream(fullPath.toFile());
+                    ClassFile classFile = new ClassFile(jarEntry.getName(), fis);
+                    classFileSet.add(classFile);
                 }
             }
-            final List<URL> classPathUrls = new ArrayList<>();
-            classPathUrls.add(tmpDir.resolve("BOOT-INF/classes").toUri().toURL());
-            Files.list(tmpDir.resolve("BOOT-INF/lib")).forEach(p -> {
-                try {
-                    classPathUrls.add(p.toUri().toURL());
-                } catch (MalformedURLException e) {
-                    logger.error("error ", e);
-                }
-            });
-            return new URLClassLoader(classPathUrls.toArray(new URL[0]));
         } catch (Exception e) {
             logger.error("error ", e);
         }
-        return null;
     }
 
-    /**
-     * resolve normal jar file
-     * @param filenameList jar filename list
-     * @return url classloader
-     */
-    public static ClassLoader resolveNormalJarFile(List<String> filenameList) {
+    private static void resolveBoot(String jarPath, Path tmpDir) {
         try {
-            List<Path> pathList = StringToPath(filenameList);
-            final List<URL> classPathUrls = new ArrayList<>();
-            for (Path jarPath : pathList) {
-                classPathUrls.add(jarPath.toUri().toURL());
+            InputStream is = new FileInputStream(jarPath);
+            JarInputStream jarInputStream = new JarInputStream(is);
+            JarEntry jarEntry;
+            while ((jarEntry = jarInputStream.getNextJarEntry()) != null) {
+                Path fullPath = tmpDir.resolve(jarEntry.getName());
+                if (!jarEntry.isDirectory()) {
+                    if (!jarEntry.getName().endsWith(".jar")) {
+                        continue;
+                    }
+                    Path dirName = fullPath.getParent();
+                    if (!Files.exists(dirName)) {
+                        Files.createDirectories(dirName);
+                    }
+                    OutputStream outputStream = Files.newOutputStream(fullPath);
+                    IOUtil.copy(jarInputStream, outputStream);
+                }
             }
-            return new URLClassLoader(classPathUrls.toArray(new URL[0]));
         } catch (Exception e) {
             logger.error("error ", e);
         }
-        return null;
     }
 
-    private static List<Path> StringToPath(List<String> path) {
-        List<Path> res = new ArrayList<>();
-        for (String p : path) {
-            res.add(Paths.get(p));
+    private static void closeAll() {
+        List<ClassFile> classFileList = new ArrayList<>(classFileSet);
+        for (ClassFile classFile : classFileList) {
+            try {
+                classFile.getInputStream().close();
+            } catch (IOException e) {
+                logger.error("error ", e);
+            }
         }
-        return res;
     }
 }

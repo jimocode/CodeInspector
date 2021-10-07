@@ -8,6 +8,9 @@ public class Command {
     @Parameter(names = {"-h", "--help"}, description = "Help Info", help = true)
     public boolean help;
 
-    @Parameter(names = {"-f", "--file"}, description = "Scan Jar File")
-    public List<String> files;
+    @Parameter(names = {"-j", "--jar"}, description = "Scan Jar File")
+    public List<String> jars;
+
+    @Parameter(names = {"-b", "--boot"}, description = "Scan SpringBoot File")
+    public List<String> boots;
 }

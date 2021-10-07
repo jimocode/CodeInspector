@@ -8,6 +8,14 @@ import java.nio.charset.StandardCharsets;
 public class FileUtil {
     private static final Logger logger = Logger.getLogger(FileUtil.class);
 
+    public static String readFile(InputStream is) {
+        return new String(doReadFile(is), StandardCharsets.UTF_8);
+    }
+
+    public static byte[] readFileBytes(InputStream is) {
+        return doReadFile(is);
+    }
+
     public static String readFile(String filename) {
         try {
             InputStream r = new FileInputStream(filename);
@@ -18,18 +26,10 @@ public class FileUtil {
         return "";
     }
 
-    public static String readFile(InputStream is) {
-        return new String(doReadFile(is), StandardCharsets.UTF_8);
-    }
-
-    public static byte[] readFileBytes(InputStream is) {
-        return doReadFile(is);
-    }
-
     private static byte[] doReadFile(InputStream is) {
         try {
             ByteArrayOutputStream byteData = new ByteArrayOutputStream();
-            byte[] temp = new byte[1024];
+            byte[] temp = new byte[1024 * 4];
             byte[] context;
             int i;
             while ((i = is.read(temp)) > 0) {
