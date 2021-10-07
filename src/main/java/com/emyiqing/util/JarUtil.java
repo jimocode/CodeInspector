@@ -12,7 +12,7 @@ import java.util.jar.JarInputStream;
 
 public class JarUtil {
     private static final Logger logger = Logger.getLogger(JarUtil.class);
-    private static final Set<ClassFile> classFileSet= new HashSet<>();
+    private static final Set<ClassFile> classFileSet = new HashSet<>();
 
     public static List<ClassFile> resolveSpringBootJarFile(String jarPath) {
         try {

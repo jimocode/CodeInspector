@@ -24,9 +24,11 @@ public class RtUtil {
         return new ArrayList<>(classFileSet);
     }
 
-    public static List<ClassFile> getAllClassesFromBoot(String jarPath) {
+    public static List<ClassFile> getAllClassesFromBoot(List<String> jarPathList) {
         Set<ClassFile> classFileSet = new HashSet<>();
-        classFileSet.addAll(JarUtil.resolveSpringBootJarFile(jarPath));
+        for (String jarPath : jarPathList) {
+            classFileSet.addAll(JarUtil.resolveSpringBootJarFile(jarPath));
+        }
         classFileSet.addAll(getRuntimeClasses());
         return new ArrayList<>(classFileSet);
     }
@@ -43,7 +45,8 @@ public class RtUtil {
                 URL runtimeUrl = ((JarURLConnection) connection).getJarFileURL();
                 URLClassLoader classLoader = new URLClassLoader(new URL[]{runtimeUrl});
                 for (ClassPath.ClassInfo classInfo : ClassPath.from(classLoader).getAllClasses()) {
-                    result.add(new ClassFile(classInfo.getResourceName(), classLoader.getResourceAsStream(classInfo.getResourceName())));
+                    result.add(new ClassFile(classInfo.getResourceName(),
+                            classLoader.getResourceAsStream(classInfo.getResourceName())));
                 }
             }
             return new ArrayList<>(result);

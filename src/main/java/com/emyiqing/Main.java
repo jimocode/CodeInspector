@@ -27,11 +27,8 @@ public class Main {
             System.out.println(classFileList.size());
         }
         if (command.boots != null && command.boots.size() != 0) {
-            List<ClassFile> crs = JarUtil.resolveSpringBootJarFile(command.boots.get(0));
-            for (ClassFile classFile : crs) {
-                System.out.println(classFile.getClassName());
-            }
-            System.out.println(crs.size());
+            List<ClassFile> classFileList = RtUtil.getAllClassesFromJars(command.boots);
+            System.out.println(classFileList.size());
         }
     }
 }
