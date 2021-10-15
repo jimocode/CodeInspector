@@ -4,7 +4,6 @@ import com.emyiqing.model.ClassFile;
 import com.google.common.reflect.ClassPath;
 import org.apache.log4j.Logger;
 
-import java.io.IOException;
 import java.net.JarURLConnection;
 import java.net.URL;
 import java.net.URLClassLoader;
