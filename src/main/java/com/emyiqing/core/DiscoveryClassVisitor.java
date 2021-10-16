@@ -11,31 +11,26 @@ import java.util.*;
 public class DiscoveryClassVisitor extends ClassVisitor {
     private static final Logger logger = Logger.getLogger(DiscoveryClassVisitor.class);
 
-    public List<ClassReference> getDiscoveredClasses() {
-        return discoveredClasses;
-    }
-
-    public List<MethodReference> getDiscoveredMethods() {
-        return discoveredMethods;
-    }
-
-    private final List<ClassReference> discoveredClasses = new ArrayList<>();
-    private final List<MethodReference> discoveredMethods = new ArrayList<>();
-
     private String name;
     private String superName;
     private String[] interfaces;
-    boolean isInterface;
+    private boolean isInterface;
     private List<ClassReference.Member> members;
     private ClassReference.Handle classHandle;
     private Set<String> annotations;
+    private List<ClassReference> discoveredClasses;
+    private List<MethodReference> discoveredMethods;
 
-    public DiscoveryClassVisitor() {
+    public DiscoveryClassVisitor(List<ClassReference> discoveredClasses,
+                                 List<MethodReference> discoveredMethods) {
         super(Opcodes.ASM6);
+        this.discoveredClasses = discoveredClasses;
+        this.discoveredMethods = discoveredMethods;
     }
 
     @Override
-    public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
+    public void visit(int version, int access, String name,
+                      String signature, String superName, String[] interfaces) {
         this.name = name;
         this.superName = superName;
         this.interfaces = interfaces;
@@ -68,7 +63,8 @@ public class DiscoveryClassVisitor extends ClassVisitor {
     }
 
     @Override
-    public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
+    public MethodVisitor visitMethod(int access, String name, String desc,
+                                     String signature, String[] exceptions) {
         boolean isStatic = (access & Opcodes.ACC_STATIC) != 0;
         discoveredMethods.add(new MethodReference(
                 classHandle,
