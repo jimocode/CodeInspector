@@ -1,6 +1,7 @@
 package com.emyiqing.core;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 public class LocalVariables<T> {
@@ -32,5 +33,8 @@ public class LocalVariables<T> {
 
     public void remove(int index){
         this.array.remove(index);
+    }
+    public List<Set<T>> getList(){
+        return this.array;
     }
 }

@@ -2,6 +2,7 @@ package com.emyiqing.core;
 
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Set;
 
 public class OperandStack<T> {
@@ -57,5 +58,9 @@ public class OperandStack<T> {
 
     public void remove(int index){
         this.stack.remove(index);
+    }
+
+    public List<Set<T>> getList(){
+        return this.stack;
     }
 }

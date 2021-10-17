@@ -1,17 +1,14 @@
 package com.emyiqing.core;
 
 import com.emyiqing.data.InheritanceMap;
+import com.emyiqing.model.ClassReference;
 import com.emyiqing.model.MethodReference;
-import org.objectweb.asm.Label;
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
+import org.objectweb.asm.*;
 import org.objectweb.asm.commons.AnalyzerAdapter;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+
+import static com.emyiqing.core.PassThroughData.PASSTHROUGH_DATAFLOW;
 
 @SuppressWarnings("all")
 public class CoreMethodAdapter<T> extends MethodVisitor {
@@ -24,7 +21,8 @@ public class CoreMethodAdapter<T> extends MethodVisitor {
     private final String[] exceptions;
 
     private final Map<MethodReference.Handle, Set<Integer>> passthroughDataflow;
-    private Set<Label> exceptionHandlerLabels = new HashSet<>();
+    private final Map<Label, GotoState<T>> gotoStates = new HashMap<>();
+    private final Set<Label> exceptionHandlerLabels = new HashSet<>();
 
     private OperandStack<T> operandStack;
     private LocalVariables<T> localVariables;
@@ -52,6 +50,61 @@ public class CoreMethodAdapter<T> extends MethodVisitor {
         }
     }
 
+    private void mergeGotoState(Label label) {
+        if (gotoStates.containsKey(label)) {
+            GotoState<T> state = gotoStates.get(label);
+            // old -> label
+            LocalVariables<T> oldLocalVariables = state.getLocalVariables();
+            OperandStack<T> oldOperandStack = state.getOperandStack();
+            // new -> null
+            LocalVariables<T> newLocalVariables = new LocalVariables<>();
+            OperandStack<T> newOperandStack = new OperandStack<>();
+            // init new
+            for (Set<T> original : oldLocalVariables.getList()) {
+                newLocalVariables.add(new HashSet<>(original));
+            }
+            for (Set<T> original : oldOperandStack.getList()) {
+                newOperandStack.add(new HashSet<>(original));
+            }
+            // add current state
+            for (int i = 0; i < localVariables.size(); i++) {
+                while (i >= newLocalVariables.size()) {
+                    newLocalVariables.add(new HashSet<>());
+                }
+                newLocalVariables.get(i).addAll(oldLocalVariables.get(i));
+            }
+            for (int i = 0; i < operandStack.size(); i++) {
+                while (i >= newOperandStack.size()) {
+                    newOperandStack.add(new HashSet<>());
+                }
+                newOperandStack.get(i).addAll(oldOperandStack.get(i));
+            }
+            // set new state
+            GotoState<T> newGotoState = new GotoState<>();
+            newGotoState.setOperandStack(newOperandStack);
+            newGotoState.setLocalVariables(newLocalVariables);
+            gotoStates.put(label, newGotoState);
+        } else {
+            LocalVariables<T> oldLocalVariables = localVariables;
+            OperandStack<T> oldOperandStack = operandStack;
+            // new -> null
+            LocalVariables<T> newLocalVariables = new LocalVariables<>();
+            OperandStack<T> newOperandStack = new OperandStack<>();
+            // init new
+            for (Set<T> original : oldLocalVariables.getList()) {
+                newLocalVariables.add(new HashSet<>(original));
+            }
+            for (Set<T> original : oldOperandStack.getList()) {
+                newOperandStack.add(new HashSet<>(original));
+            }
+            // set new state
+            GotoState<T> newGotoState = new GotoState<>();
+            newGotoState.setOperandStack(newOperandStack);
+            newGotoState.setLocalVariables(newLocalVariables);
+            gotoStates.put(label, newGotoState);
+        }
+    }
+
     @Override
     public void visitCode() {
         super.visitCode();
@@ -59,11 +112,11 @@ public class CoreMethodAdapter<T> extends MethodVisitor {
         operandStack.clear();
 
         if ((this.access & Opcodes.ACC_STATIC) == 0) {
-            localVariables.add(new HashSet<T>());
+            localVariables.add(new HashSet<>());
         }
         for (Type argType : Type.getArgumentTypes(desc)) {
             for (int i = 0; i < argType.getSize(); i++) {
-                localVariables.add(new HashSet<T>());
+                localVariables.add(new HashSet<>());
             }
         }
     }
@@ -108,7 +161,7 @@ public class CoreMethodAdapter<T> extends MethodVisitor {
     public void visitInsn(int opcode) {
         Set<T> saved0, saved1, saved2, saved3;
         sanityCheck();
-        switch(opcode) {
+        switch (opcode) {
             case Opcodes.NOP:
                 break;
             case Opcodes.ACONST_NULL:
@@ -394,7 +447,7 @@ public class CoreMethodAdapter<T> extends MethodVisitor {
 
     @Override
     public void visitIntInsn(int opcode, int operand) {
-        switch(opcode) {
+        switch (opcode) {
             case Opcodes.BIPUSH:
             case Opcodes.SIPUSH:
                 operandStack.push();
@@ -413,10 +466,10 @@ public class CoreMethodAdapter<T> extends MethodVisitor {
     @Override
     public void visitVarInsn(int opcode, int var) {
         for (int i = localVariables.size(); i <= var; i++) {
-            localVariables.add(new HashSet<T>());
+            localVariables.add(new HashSet<>());
         }
         Set<T> saved0;
-        switch(opcode) {
+        switch (opcode) {
             case Opcodes.ILOAD:
             case Opcodes.FLOAD:
                 operandStack.push();
@@ -432,13 +485,13 @@ public class CoreMethodAdapter<T> extends MethodVisitor {
             case Opcodes.ISTORE:
             case Opcodes.FSTORE:
                 operandStack.pop();
-                localVariables.set(var, new HashSet<T>());
+                localVariables.set(var, new HashSet<>());
                 break;
             case Opcodes.DSTORE:
             case Opcodes.LSTORE:
                 operandStack.pop();
                 operandStack.pop();
-                localVariables.set(var, new HashSet<T>());
+                localVariables.set(var, new HashSet<>());
                 break;
             case Opcodes.ASTORE:
                 saved0 = operandStack.pop();
@@ -455,7 +508,7 @@ public class CoreMethodAdapter<T> extends MethodVisitor {
 
     @Override
     public void visitTypeInsn(int opcode, String type) {
-        switch(opcode) {
+        switch (opcode) {
             case Opcodes.NEW:
                 operandStack.push();
                 break;
@@ -474,5 +527,282 @@ public class CoreMethodAdapter<T> extends MethodVisitor {
         }
         super.visitTypeInsn(opcode, type);
         sanityCheck();
+    }
+
+    @Override
+    public void visitFieldInsn(int opcode, String owner, String name, String desc) {
+        int typeSize = Type.getType(desc).getSize();
+        switch (opcode) {
+            case Opcodes.GETSTATIC:
+                for (int i = 0; i < typeSize; i++) {
+                    operandStack.push();
+                }
+                break;
+            case Opcodes.PUTSTATIC:
+                for (int i = 0; i < typeSize; i++) {
+                    operandStack.pop();
+                }
+                break;
+            case Opcodes.GETFIELD:
+                operandStack.pop();
+                for (int i = 0; i < typeSize; i++) {
+                    operandStack.push();
+                }
+                break;
+            case Opcodes.PUTFIELD:
+                for (int i = 0; i < typeSize; i++) {
+                    operandStack.pop();
+                }
+                operandStack.pop();
+                break;
+            default:
+                throw new IllegalStateException("unsupported opcode: " + opcode);
+        }
+        super.visitFieldInsn(opcode, owner, name, desc);
+        sanityCheck();
+    }
+
+    @Override
+    public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
+        final MethodReference.Handle methodHandle = new MethodReference.Handle(
+                new ClassReference.Handle(owner), name, desc);
+        Type[] argTypes = Type.getArgumentTypes(desc);
+        if (opcode != Opcodes.INVOKESTATIC) {
+            Type[] extendedArgTypes = new Type[argTypes.length + 1];
+            System.arraycopy(argTypes, 0, extendedArgTypes, 1, argTypes.length);
+            extendedArgTypes[0] = Type.getObjectType(owner);
+            argTypes = extendedArgTypes;
+        }
+        final Type returnType = Type.getReturnType(desc);
+        final int retSize = returnType.getSize();
+        switch (opcode) {
+            case Opcodes.INVOKESTATIC:
+            case Opcodes.INVOKEVIRTUAL:
+            case Opcodes.INVOKESPECIAL:
+            case Opcodes.INVOKEINTERFACE:
+                final List<Set<T>> argTaint = new ArrayList<>(argTypes.length);
+                for (int i = 0; i < argTypes.length; i++) {
+                    argTaint.add(null);
+                }
+                for (int i = 0; i < argTypes.length; i++) {
+                    Type argType = argTypes[i];
+                    if (argType.getSize() > 0) {
+                        for (int j = 0; j < argType.getSize() - 1; j++) {
+                            operandStack.pop();
+                        }
+                        argTaint.set(argTypes.length - 1 - i, operandStack.pop());
+                    }
+                }
+                Set<T> resultTaint;
+                if (name.equals("<init>")) {
+                    resultTaint = argTaint.get(0);
+                } else {
+                    resultTaint = new HashSet<>();
+                }
+                if (owner.equals("java/io/ObjectInputStream") &&
+                        name.equals("defaultReadObject") && desc.equals("()V")) {
+                    localVariables.get(0).addAll(argTaint.get(0));
+                }
+                for (Object[] passthrough : PASSTHROUGH_DATAFLOW) {
+                    if (passthrough[0].equals(owner) &&
+                            passthrough[1].equals(name) &&
+                            passthrough[2].equals(desc)) {
+                        for (int i = 3; i < passthrough.length; i++) {
+                            resultTaint.addAll(argTaint.get((Integer) passthrough[i]));
+                        }
+                    }
+                }
+                if (passthroughDataflow != null) {
+                    Set<Integer> passthroughArgs = passthroughDataflow.get(methodHandle);
+                    if (passthroughArgs != null) {
+                        for (int arg : passthroughArgs) {
+                            resultTaint.addAll(argTaint.get(arg));
+                        }
+                    }
+                }
+                if (opcode != Opcodes.INVOKESTATIC && argTypes[0].getSort() == Type.OBJECT) {
+                    Set<ClassReference.Handle> parents = inheritanceMap.getSuperClasses(
+                            new ClassReference.Handle(argTypes[0].getClassName().replace('.', '/')));
+                    if (parents != null &&
+                            (parents.contains(new ClassReference.Handle("java/util/Collection")) ||
+                                    parents.contains(new ClassReference.Handle("java/util/Map")))) {
+                        for (int i = 1; i < argTaint.size(); i++) {
+                            argTaint.get(0).addAll(argTaint.get(i));
+                        }
+                        if (returnType.getSort() == Type.OBJECT || returnType.getSort() == Type.ARRAY) {
+                            resultTaint.addAll(argTaint.get(0));
+                        }
+                    }
+                }
+                if (retSize > 0) {
+                    operandStack.push(resultTaint);
+                    for (int i = 1; i < retSize; i++) {
+                        operandStack.push();
+                    }
+                }
+                break;
+            default:
+                throw new IllegalStateException("unsupported opcode: " + opcode);
+        }
+        super.visitMethodInsn(opcode, owner, name, desc, itf);
+        sanityCheck();
+    }
+
+    @Override
+    public void visitInvokeDynamicInsn(String name, String desc, Handle bsm, Object... bsmArgs) {
+        int argsSize = 0;
+        for (Type type : Type.getArgumentTypes(desc)) {
+            argsSize += type.getSize();
+        }
+        int retSize = Type.getReturnType(desc).getSize();
+        for (int i = 0; i < argsSize; i++) {
+            operandStack.pop();
+        }
+        for (int i = 0; i < retSize; i++) {
+            operandStack.push();
+        }
+        super.visitInvokeDynamicInsn(name, desc, bsm, bsmArgs);
+        sanityCheck();
+    }
+
+    @Override
+    public void visitJumpInsn(int opcode, Label label) {
+        switch (opcode) {
+            case Opcodes.IFEQ:
+            case Opcodes.IFNE:
+            case Opcodes.IFLT:
+            case Opcodes.IFGE:
+            case Opcodes.IFGT:
+            case Opcodes.IFLE:
+            case Opcodes.IFNULL:
+            case Opcodes.IFNONNULL:
+                operandStack.pop();
+                break;
+            case Opcodes.IF_ICMPEQ:
+            case Opcodes.IF_ICMPNE:
+            case Opcodes.IF_ICMPLT:
+            case Opcodes.IF_ICMPGE:
+            case Opcodes.IF_ICMPGT:
+            case Opcodes.IF_ICMPLE:
+            case Opcodes.IF_ACMPEQ:
+            case Opcodes.IF_ACMPNE:
+                operandStack.pop();
+                operandStack.pop();
+                break;
+            case Opcodes.GOTO:
+                break;
+            case Opcodes.JSR:
+                operandStack.push();
+                super.visitJumpInsn(opcode, label);
+                return;
+            default:
+                throw new IllegalStateException("unsupported opcode: " + opcode);
+        }
+        mergeGotoState(label);
+        super.visitJumpInsn(opcode, label);
+        sanityCheck();
+    }
+
+    @Override
+    public void visitLabel(Label label) {
+        if (gotoStates.containsKey(label)) {
+            GotoState<T> state = gotoStates.get(label);
+            // old -> label
+            LocalVariables<T> oldLocalVariables = state.getLocalVariables();
+            OperandStack<T> oldOperandStack = state.getOperandStack();
+            // new -> null
+            LocalVariables<T> newLocalVariables = new LocalVariables<>();
+            OperandStack<T> newOperandStack = new OperandStack<>();
+            // init new
+            for (Set<T> original : oldLocalVariables.getList()) {
+                newLocalVariables.add(new HashSet<>(original));
+            }
+            for (Set<T> original : oldOperandStack.getList()) {
+                newOperandStack.add(new HashSet<>(original));
+            }
+            this.operandStack = newOperandStack;
+            this.localVariables = newLocalVariables;
+        }
+        if (exceptionHandlerLabels.contains(label)) {
+            operandStack.push(new HashSet<>());
+        }
+        super.visitLabel(label);
+        sanityCheck();
+    }
+
+    @Override
+    public void visitLdcInsn(Object cst) {
+        if (cst instanceof Long || cst instanceof Double) {
+            operandStack.push();
+            operandStack.push();
+        } else {
+            operandStack.push();
+        }
+        super.visitLdcInsn(cst);
+        sanityCheck();
+    }
+
+    @Override
+    public void visitIincInsn(int var, int increment) {
+        super.visitIincInsn(var, increment);
+        sanityCheck();
+    }
+
+    @Override
+    public void visitTableSwitchInsn(int min, int max, Label dflt, Label... labels) {
+        operandStack.pop();
+        mergeGotoState(dflt);
+        for (Label label : labels) {
+            mergeGotoState(label);
+        }
+        super.visitTableSwitchInsn(min, max, dflt, labels);
+        sanityCheck();
+    }
+
+    @Override
+    public void visitLookupSwitchInsn(Label dflt, int[] keys, Label[] labels) {
+        operandStack.pop();
+        mergeGotoState(dflt);
+        for (Label label : labels) {
+            mergeGotoState(label);
+        }
+        super.visitLookupSwitchInsn(dflt, keys, labels);
+        sanityCheck();
+    }
+
+    @Override
+    public void visitMultiANewArrayInsn(String desc, int dims) {
+        for (int i = 0; i < dims; i++) {
+            operandStack.pop();
+        }
+        operandStack.push();
+        super.visitMultiANewArrayInsn(desc, dims);
+        sanityCheck();
+    }
+
+    @Override
+    public AnnotationVisitor visitInsnAnnotation(int typeRef, TypePath typePath, String desc, boolean visible) {
+        return super.visitInsnAnnotation(typeRef, typePath, desc, visible);
+    }
+
+    @Override
+    public void visitTryCatchBlock(Label start, Label end, Label handler, String type) {
+        exceptionHandlerLabels.add(handler);
+        super.visitTryCatchBlock(start, end, handler, type);
+    }
+
+    @Override
+    public AnnotationVisitor visitTryCatchAnnotation(int typeRef, TypePath typePath, String desc, boolean visible) {
+        return super.visitTryCatchAnnotation(typeRef, typePath, desc, visible);
+    }
+
+    @Override
+    public void visitMaxs(int maxStack, int maxLocals) {
+        super.visitMaxs(maxStack, maxLocals);
+    }
+
+    @Override
+    public void visitEnd() {
+        super.visitEnd();
     }
 }
