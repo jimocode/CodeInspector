@@ -3,6 +3,7 @@ package com.emyiqing.core;
 import com.emyiqing.data.InheritanceMap;
 import com.emyiqing.model.ClassReference;
 import com.emyiqing.model.MethodReference;
+import com.emyiqing.service.Decider;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
@@ -18,16 +19,18 @@ public class DataFlowClassVisitor extends ClassVisitor {
     private final Map<MethodReference.Handle, Set<Integer>> passthroughDataflow;
 
     private String name;
+    private Decider decider;
     private DataFlowMethodAdapter dataFlowMethodAdapter;
 
     public DataFlowClassVisitor(Map<ClassReference.Handle, ClassReference> classMap,
-                                InheritanceMap inheritanceMap,
+                                InheritanceMap inheritanceMap, Decider decider,
                                 Map<MethodReference.Handle, Set<Integer>> passthroughDataflow,
                                 MethodReference.Handle methodToVisit) {
         super(Opcodes.ASM6);
         this.classMap = classMap;
         this.inheritanceMap = inheritanceMap;
         this.methodToVisit = methodToVisit;
+        this.decider = decider;
         this.passthroughDataflow = passthroughDataflow;
     }
 
@@ -45,7 +48,7 @@ public class DataFlowClassVisitor extends ClassVisitor {
             return null;
         }
         MethodVisitor mv = super.visitMethod(access, name, desc, signature, exceptions);
-        dataFlowMethodAdapter = new DataFlowMethodAdapter(classMap, inheritanceMap,
+        dataFlowMethodAdapter = new DataFlowMethodAdapter(classMap, inheritanceMap, decider,
                 this.passthroughDataflow, mv, this.name, access, name, desc, signature, exceptions);
         return new JSRInlinerAdapter(dataFlowMethodAdapter, access, name, desc, signature, exceptions);
     }

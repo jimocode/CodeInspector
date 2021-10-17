@@ -1,6 +1,7 @@
 package com.emyiqing.core;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -21,6 +22,12 @@ public class LocalVariables<T> {
 
     public void set(int index, Set<T> t) {
         array.set(index, t);
+    }
+
+    public void set(int index, T t) {
+        Set<T> set = new HashSet<>();
+        set.add(t);
+        array.set(index, set);
     }
 
     public Set<T> get(int index) {

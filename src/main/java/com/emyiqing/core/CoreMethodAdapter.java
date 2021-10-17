@@ -24,8 +24,8 @@ public class CoreMethodAdapter<T> extends MethodVisitor {
     private final Map<Label, GotoState<T>> gotoStates = new HashMap<>();
     private final Set<Label> exceptionHandlerLabels = new HashSet<>();
 
-    private OperandStack<T> operandStack;
-    private LocalVariables<T> localVariables;
+    protected OperandStack<T> operandStack;
+    protected LocalVariables<T> localVariables;
 
     public CoreMethodAdapter(InheritanceMap inheritanceMap,
                              Map<MethodReference.Handle, Set<Integer>> passthroughDataflow,
