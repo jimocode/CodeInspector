@@ -20,16 +20,9 @@ public class SimpleSerializableDecider implements Decider {
         if (cached != null) {
             return cached;
         }
-        Boolean result = applyNoCache(handle);
+        Boolean result = inheritanceMap.isSubclassOf(handle,
+                new ClassReference.Handle("java/io/Serializable"));
         cache.put(handle, result);
         return result;
-    }
-
-    private Boolean applyNoCache(ClassReference.Handle handle) {
-        if (inheritanceMap.isSubclassOf(handle,
-                new ClassReference.Handle("java/io/Serializable"))) {
-            return true;
-        }
-        return false;
     }
 }

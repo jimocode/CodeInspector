@@ -67,17 +67,17 @@ public class CoreMethodAdapter<T> extends MethodVisitor {
                 newOperandStack.add(new HashSet<>(original));
             }
             // add current state
-            for (int i = 0; i < localVariables.size(); i++) {
-                while (i >= newLocalVariables.size()) {
-                    newLocalVariables.add(new HashSet<>());
+            for (int i = 0; i < newLocalVariables.size(); i++) {
+                while (i >= oldLocalVariables.size()) {
+                    oldLocalVariables.add(new HashSet<>());
                 }
                 newLocalVariables.get(i).addAll(oldLocalVariables.get(i));
             }
-            for (int i = 0; i < operandStack.size(); i++) {
-                while (i >= newOperandStack.size()) {
-                    newOperandStack.add(new HashSet<>());
+            for (int i = 0; i < newOperandStack.size(); i++) {
+                while (i >= oldOperandStack.size()) {
+                    oldOperandStack.add(new HashSet<>());
                 }
-                newOperandStack.get(i).addAll(oldOperandStack.get(i));
+                oldOperandStack.get(i).addAll(oldOperandStack.get(i));
             }
             // set new state
             GotoState<T> newGotoState = new GotoState<>();

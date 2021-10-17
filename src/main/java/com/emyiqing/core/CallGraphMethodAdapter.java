@@ -1,5 +1,6 @@
 package com.emyiqing.core;
 
+
 import com.emyiqing.data.InheritanceMap;
 import com.emyiqing.model.ClassReference;
 import com.emyiqing.model.MethodReference;
@@ -8,34 +9,35 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 
-import java.util.*;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
-@SuppressWarnings("all")
-public class DataFlowMethodAdapter extends CoreMethodAdapter<Integer> {
-
+public class CallGraphMethodAdapter extends CoreMethodAdapter<String> {
     private final Map<ClassReference.Handle, ClassReference> classMap;
+    private final Set<CallGraph> discoveredCalls;
     private final InheritanceMap inheritanceMap;
-    private final Decider decider;
-    private final Map<MethodReference.Handle, Set<Integer>> passthroughDataflow;
-
+    private final Decider serializableDecider;
+    private final String owner;
     private final int access;
+    private final String name;
     private final String desc;
-    private final Set<Integer> returnTaint;
 
-    public DataFlowMethodAdapter(Map<ClassReference.Handle, ClassReference> classMap,
-                                 InheritanceMap inheritanceMap, Decider decider,
-                                 Map<MethodReference.Handle, Set<Integer>> passthroughDataflow,
-                                 MethodVisitor mv, String owner, int access, String name,
-                                 String desc, String signature, String[] exceptions) {
-        super(inheritanceMap, passthroughDataflow,
-                Opcodes.ASM6, mv, owner, access, name, desc, signature, exceptions);
+    public CallGraphMethodAdapter(Map<ClassReference.Handle, ClassReference> classMap,
+                                  InheritanceMap inheritanceMap,
+                                  Map<MethodReference.Handle, Set<Integer>> passthroughDataflow,
+                                  Decider serializableDecider, final int api,Set<CallGraph> discoveredCalls,
+                                  final MethodVisitor mv, final String owner, int access, String name, String desc,
+                                  String signature, String[] exceptions) {
+        super(inheritanceMap, passthroughDataflow, api, mv, owner, access, name, desc, signature, exceptions);
         this.classMap = classMap;
         this.inheritanceMap = inheritanceMap;
-        this.passthroughDataflow = passthroughDataflow;
+        this.serializableDecider = serializableDecider;
+        this.owner = owner;
         this.access = access;
+        this.name = name;
         this.desc = desc;
-        this.decider = decider;
-        returnTaint = new HashSet<>();
+        this.discoveredCalls = discoveredCalls;
     }
 
     private static boolean couldBeSerialized(Decider decider, InheritanceMap inheritanceMap,
@@ -60,35 +62,15 @@ public class DataFlowMethodAdapter extends CoreMethodAdapter<Integer> {
         int localIndex = 0;
         int argIndex = 0;
         if ((this.access & Opcodes.ACC_STATIC) == 0) {
-            localVariables.set(localIndex, argIndex);
+            localVariables.set(localIndex, "arg" + argIndex);
             localIndex += 1;
             argIndex += 1;
         }
         for (Type argType : Type.getArgumentTypes(desc)) {
-            localVariables.set(localIndex, argIndex);
+            localVariables.set(localIndex, "arg" + argIndex);
             localIndex += argType.getSize();
             argIndex += 1;
         }
-    }
-
-    @Override
-    public void visitInsn(int opcode) {
-        switch (opcode) {
-            case Opcodes.IRETURN:
-            case Opcodes.FRETURN:
-            case Opcodes.ARETURN:
-                returnTaint.addAll(operandStack.get(0));
-                break;
-            case Opcodes.LRETURN:
-            case Opcodes.DRETURN:
-                returnTaint.addAll(operandStack.get(1));
-                break;
-            case Opcodes.RETURN:
-                break;
-            default:
-                break;
-        }
-        super.visitInsn(opcode);
     }
 
     @Override
@@ -104,7 +86,7 @@ public class DataFlowMethodAdapter extends CoreMethodAdapter<Integer> {
                     break;
                 }
                 Boolean isTransient = null;
-                if (!couldBeSerialized(decider, inheritanceMap,
+                if (!couldBeSerialized(serializableDecider, inheritanceMap,
                         new ClassReference.Handle(type.getInternalName()))) {
                     isTransient = Boolean.TRUE;
                 } else {
@@ -122,23 +104,20 @@ public class DataFlowMethodAdapter extends CoreMethodAdapter<Integer> {
                         clazz = classMap.get(new ClassReference.Handle(clazz.getSuperClass()));
                     }
                 }
-
-                Set<Integer> taint;
+                Set<String> newTaint = new HashSet<>();
                 if (!Boolean.TRUE.equals(isTransient)) {
-                    taint = operandStack.get(0);
-                } else {
-                    taint = new HashSet<>();
+                    for (String s : operandStack.get(0)) {
+                        newTaint.add(s + "." + name);
+                    }
                 }
-
                 super.visitFieldInsn(opcode, owner, name, desc);
-                operandStack.set(0, taint);
+                operandStack.set(0, newTaint);
                 return;
             case Opcodes.PUTFIELD:
                 break;
             default:
                 throw new IllegalStateException("unsupported opcode: " + opcode);
         }
-
         super.visitFieldInsn(opcode, owner, name, desc);
     }
 
@@ -151,49 +130,47 @@ public class DataFlowMethodAdapter extends CoreMethodAdapter<Integer> {
             extendedArgTypes[0] = Type.getObjectType(owner);
             argTypes = extendedArgTypes;
         }
-        int retSize = Type.getReturnType(desc).getSize();
-        Set<Integer> resultTaint;
         switch (opcode) {
             case Opcodes.INVOKESTATIC:
             case Opcodes.INVOKEVIRTUAL:
             case Opcodes.INVOKESPECIAL:
             case Opcodes.INVOKEINTERFACE:
-                final List<Set<Integer>> argTaint = new ArrayList<>(argTypes.length);
-                for (int i = 0; i < argTypes.length; i++) {
-                    argTaint.add(null);
-                }
                 int stackIndex = 0;
                 for (int i = 0; i < argTypes.length; i++) {
-                    Type argType = argTypes[i];
-                    if (argType.getSize() > 0) {
-                        argTaint.set(argTypes.length - 1 - i,
-                                operandStack.get(stackIndex+argType.getSize()-1));
+                    int argIndex = argTypes.length-1-i;
+                    Type type = argTypes[argIndex];
+                    Set<String> taint = operandStack.get(stackIndex);
+                    if (taint.size() > 0) {
+                        for (String argSrc : taint) {
+                            if (!argSrc.startsWith("arg")) {
+                                throw new IllegalStateException("invalid taint arg: " + argSrc);
+                            }
+                            int dotIndex = argSrc.indexOf('.');
+                            int srcArgIndex;
+                            String srcArgPath;
+                            if (dotIndex == -1) {
+                                srcArgIndex = Integer.parseInt(argSrc.substring(3));
+                                srcArgPath = null;
+                            } else {
+                                srcArgIndex = Integer.parseInt(argSrc.substring(3, dotIndex));
+                                srcArgPath = argSrc.substring(dotIndex+1);
+                            }
+                            discoveredCalls.add(new CallGraph(
+                                    new MethodReference.Handle(
+                                            new ClassReference.Handle(this.owner), this.name, this.desc),
+                                    new MethodReference.Handle(
+                                            new ClassReference.Handle(owner), name, desc),
+                                    srcArgIndex,
+                                    srcArgPath,
+                                    argIndex));
+                        }
                     }
-                    stackIndex += argType.getSize();
-                }
-                if (name.equals("<init>")) {
-                    resultTaint = argTaint.get(0);
-                } else {
-                    resultTaint = new HashSet<>();
-                }
-                Set<Integer> passthrough = passthroughDataflow.get(
-                        new MethodReference.Handle(new ClassReference.Handle(owner), name, desc));
-                if (passthrough != null) {
-                    for (Integer passthroughDataflowArg : passthrough) {
-                        resultTaint.addAll(argTaint.get(passthroughDataflowArg));
-                    }
+                    stackIndex += type.getSize();
                 }
                 break;
             default:
                 throw new IllegalStateException("unsupported opcode: " + opcode);
         }
         super.visitMethodInsn(opcode, owner, name, desc, itf);
-        if (retSize > 0) {
-            operandStack.get(retSize-1).addAll(resultTaint);
-        }
-    }
-
-    public Set<Integer> getReturnTaint() {
-        return returnTaint;
     }
 }

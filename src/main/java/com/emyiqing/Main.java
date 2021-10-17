@@ -3,15 +3,14 @@ package com.emyiqing;
 import com.beust.jcommander.JCommander;
 import com.emyiqing.config.Command;
 import com.emyiqing.config.Logo;
-import com.emyiqing.core.DataFlowClassVisitor;
-import com.emyiqing.core.DiscoveryClassVisitor;
-import com.emyiqing.core.MethodCallClassVisitor;
-import com.emyiqing.core.Sort;
+import com.emyiqing.core.*;
 import com.emyiqing.data.InheritanceMap;
 import com.emyiqing.data.InheritanceUtil;
 import com.emyiqing.model.ClassFile;
 import com.emyiqing.model.ClassReference;
 import com.emyiqing.model.MethodReference;
+import com.emyiqing.service.Decider;
+import com.emyiqing.service.SimpleSerializableDecider;
 import com.emyiqing.util.RtUtil;
 import org.apache.log4j.Logger;
 import org.objectweb.asm.ClassReader;
@@ -44,6 +43,7 @@ public class Main {
         Map<MethodReference.Handle, Set<MethodReference.Handle>> methodCalls = new HashMap<>();
         List<MethodReference.Handle> sortedMethods;
         Map<MethodReference.Handle, Set<Integer>> dataflow = new HashMap<>();
+        Set<CallGraph> discoveredCalls = new HashSet<>();
 
         logger.info("get all classes");
         List<ClassFile> classFileList = RtUtil.getAllClassesFromJars(jars);
@@ -97,6 +97,7 @@ public class Main {
         }
 
         logger.info("get data flow");
+        Decider decider = new SimpleSerializableDecider(inheritanceMap);
         for (MethodReference.Handle method : sortedMethods) {
             if (method.getName().equals("<clinit>")) {
                 continue;
@@ -106,12 +107,83 @@ public class Main {
                 InputStream ins = file.getInputStream();
                 ClassReader cr = new ClassReader(ins);
                 ins.close();
-                DataFlowClassVisitor cv = new DataFlowClassVisitor(classMap, inheritanceMap, dataflow, method);
+                DataFlowClassVisitor cv = new DataFlowClassVisitor(classMap, inheritanceMap,
+                        decider, dataflow, method);
                 cr.accept(cv, ClassReader.EXPAND_FRAMES);
                 dataflow.put(method, cv.getReturnTaint());
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
+
+        logger.info("build call graph");
+        for (MethodReference.Handle method : sortedMethods) {
+            ClassFile file = classFileByName.get(method.getClassReference().getName());
+            try {
+                InputStream ins = file.getInputStream();
+                ClassReader cr = new ClassReader(ins);
+                ins.close();
+                CallGraphClassVisitor cv = new CallGraphClassVisitor(classMap, inheritanceMap,
+                        dataflow, decider, discoveredCalls);
+                cr.accept(cv, ClassReader.EXPAND_FRAMES);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        logger.info("build source");
+        final List<Source> discoveredSources = new ArrayList<>();
+        Map<MethodReference.Handle, MethodReference> methodMap = new HashMap<>();
+        for (MethodReference method : discoveredMethods) {
+            methodMap.put(method.getHandle(), method);
+        }
+        final Decider serializableDecider = new SimpleSerializableDecider(inheritanceMap);
+        Map<MethodReference.Handle, Set<CallGraph>> graphCallMap = new HashMap<>();
+        for (CallGraph graphCall : discoveredCalls) {
+            MethodReference.Handle caller = graphCall.getCallerMethod();
+            if (!graphCallMap.containsKey(caller)) {
+                Set<CallGraph> graphCalls = new HashSet<>();
+                graphCalls.add(graphCall);
+                graphCallMap.put(caller, graphCalls);
+            } else {
+                graphCallMap.get(caller).add(graphCall);
+            }
+        }
+        for (MethodReference.Handle method : methodMap.keySet()) {
+            if (Boolean.TRUE.equals(serializableDecider.apply(method.getClassReference()))) {
+                if (method.getName().equals("finalize") && method.getDesc().equals("()V")) {
+                    discoveredSources.add(new Source(method, 0));
+                }
+            }
+        }
+        for (MethodReference.Handle method : methodMap.keySet()) {
+            if (Boolean.TRUE.equals(serializableDecider.apply(method.getClassReference()))) {
+                if (method.getName().equals("readObject") &&
+                        method.getDesc().equals("(Ljava/io/ObjectInputStream;)V")) {
+                    discoveredSources.add(new Source(method, 1));
+                }
+            }
+        }
+        for (ClassReference.Handle clazz : classMap.keySet()) {
+            if (Boolean.TRUE.equals(serializableDecider.apply(clazz))
+                    && inheritanceMap.isSubclassOf(clazz,
+                    new ClassReference.Handle("java/lang/reflect/InvocationHandler"))) {
+                MethodReference.Handle method = new MethodReference.Handle(clazz, "invoke",
+                        "(Ljava/lang/Object;Ljava/lang/reflect/Method;[Ljava/lang/Object;)Ljava/lang/Object;");
+                discoveredSources.add(new Source(method, 0));
+            }
+        }
+        for (MethodReference.Handle method : methodMap.keySet()) {
+            if (Boolean.TRUE.equals(serializableDecider.apply(method.getClassReference()))) {
+                if (method.getName().equals("hashCode") && method.getDesc().equals("()I")) {
+                    discoveredSources.add(new Source(method, 0));
+                }
+                if (method.getName().equals("equals") && method.getDesc().equals("(Ljava/lang/Object;)Z")) {
+                    discoveredSources.add(new Source(method, 0));
+                    discoveredSources.add(new Source(method, 1));
+                }
+            }
+        }
+        System.out.println(discoveredSources);
     }
 }
