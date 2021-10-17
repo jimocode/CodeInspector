@@ -3,7 +3,10 @@ package com.emyiqing;
 import com.beust.jcommander.JCommander;
 import com.emyiqing.config.Command;
 import com.emyiqing.config.Logo;
+import com.emyiqing.core.DataFlowClassVisitor;
 import com.emyiqing.core.DiscoveryClassVisitor;
+import com.emyiqing.core.MethodCallClassVisitor;
+import com.emyiqing.core.Sort;
 import com.emyiqing.data.InheritanceMap;
 import com.emyiqing.data.InheritanceUtil;
 import com.emyiqing.model.ClassFile;
@@ -14,18 +17,11 @@ import org.apache.log4j.Logger;
 import org.objectweb.asm.ClassReader;
 
 import java.io.IOException;
-import java.sql.ResultSetMetaData;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.io.InputStream;
+import java.util.*;
 
 public class Main {
     private static final Logger logger = Logger.getLogger(Main.class);
-    private static final List<ClassReference> discoveredClasses = new ArrayList<>();
-    private static final List<MethodReference> discoveredMethods = new ArrayList<>();
-
-    private static  InheritanceMap inheritanceMap;
 
     public static void main(String[] args) {
         Logo.PrintLogo();
@@ -37,22 +33,85 @@ public class Main {
             jc.usage();
         }
         if (command.jars != null && command.jars.size() != 0) {
-            List<ClassFile> classFileList = RtUtil.getAllClassesFromJars(command.jars);
-            for (ClassFile file : classFileList) {
-                try {
-                    DiscoveryClassVisitor dcv = new DiscoveryClassVisitor(discoveredClasses, discoveredMethods);
-                    ClassReader cr = new ClassReader(file.getInputStream());
-                    cr.accept(dcv, ClassReader.EXPAND_FRAMES);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+            start(command.jars);
+        }
+    }
+
+    private static void start(List<String> jars) {
+        List<ClassReference> discoveredClasses = new ArrayList<>();
+        List<MethodReference> discoveredMethods = new ArrayList<>();
+        InheritanceMap inheritanceMap;
+        Map<MethodReference.Handle, Set<MethodReference.Handle>> methodCalls = new HashMap<>();
+        List<MethodReference.Handle> sortedMethods;
+        Map<MethodReference.Handle, Set<Integer>> dataflow = new HashMap<>();
+
+        logger.info("get all classes");
+        List<ClassFile> classFileList = RtUtil.getAllClassesFromJars(jars);
+
+        logger.info("discover all classes");
+        for (ClassFile file : classFileList) {
+            try {
+                DiscoveryClassVisitor dcv = new DiscoveryClassVisitor(discoveredClasses, discoveredMethods);
+                InputStream ins = file.getInputStream();
+                ClassReader cr = new ClassReader(ins);
+                ins.close();
+                cr.accept(dcv, ClassReader.EXPAND_FRAMES);
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-            Map<ClassReference.Handle, ClassReference> classMap = new HashMap<>();
-            for (ClassReference clazz : discoveredClasses) {
-                classMap.put(clazz.getHandle(), clazz);
+        }
+
+        logger.info("build inheritance");
+        Map<ClassReference.Handle, ClassReference> classMap = new HashMap<>();
+        for (ClassReference clazz : discoveredClasses) {
+            classMap.put(clazz.getHandle(), clazz);
+        }
+        inheritanceMap = InheritanceUtil.derive(classMap);
+
+        logger.info("get method calls in method");
+        Map<String, ClassFile> classFileByName = new HashMap<>();
+        for (ClassFile file : classFileList) {
+            try {
+                MethodCallClassVisitor mcv = new MethodCallClassVisitor(methodCalls);
+                InputStream ins = file.getInputStream();
+                ClassReader cr = new ClassReader(ins);
+                ins.close();
+                cr.accept(mcv, ClassReader.EXPAND_FRAMES);
+                classFileByName.put(mcv.getName(), file);
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-            inheritanceMap = InheritanceUtil.derive(classMap);
-            System.out.println(inheritanceMap);
+        }
+
+        logger.info("topological sort methods");
+        Map<MethodReference.Handle, Set<MethodReference.Handle>> outgoingReferences = new HashMap<>();
+        for (Map.Entry<MethodReference.Handle, Set<MethodReference.Handle>> entry : methodCalls.entrySet()) {
+            MethodReference.Handle method = entry.getKey();
+            outgoingReferences.put(method, new HashSet<>(entry.getValue()));
+        }
+        Set<MethodReference.Handle> dfsStack = new HashSet<>();
+        Set<MethodReference.Handle> visitedNodes = new HashSet<>();
+        sortedMethods = new ArrayList<>(outgoingReferences.size());
+        for (MethodReference.Handle root : outgoingReferences.keySet()) {
+            Sort.dfsSort(outgoingReferences, sortedMethods, visitedNodes, dfsStack, root);
+        }
+
+        logger.info("get data flow");
+        for (MethodReference.Handle method : sortedMethods) {
+            if (method.getName().equals("<clinit>")) {
+                continue;
+            }
+            ClassFile file = classFileByName.get(method.getClassReference().getName());
+            try {
+                InputStream ins = file.getInputStream();
+                ClassReader cr = new ClassReader(ins);
+                ins.close();
+                DataFlowClassVisitor cv = new DataFlowClassVisitor(classMap, inheritanceMap, dataflow, method);
+                cr.accept(cv, ClassReader.EXPAND_FRAMES);
+                dataflow.put(method, cv.getReturnTaint());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 }

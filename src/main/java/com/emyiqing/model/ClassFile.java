@@ -1,11 +1,16 @@
 package com.emyiqing.model;
 
+import com.emyiqing.util.IOUtil;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.Objects;
 
 public class ClassFile {
     private final String className;
-    private final InputStream inputStream;
+    private InputStream inputStream;
 
     public ClassFile(String className, InputStream inputStream) {
         this.className = className;
@@ -34,6 +39,17 @@ public class ClassFile {
     }
 
     public InputStream getInputStream() {
-        return inputStream;
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        IOUtil.copy(inputStream, outputStream);
+        this.inputStream = new ByteArrayInputStream(outputStream.toByteArray());
+        return new ByteArrayInputStream(outputStream.toByteArray());
+    }
+
+    public void close(){
+        try {
+            this.inputStream.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

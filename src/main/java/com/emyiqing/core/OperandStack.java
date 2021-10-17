@@ -1,19 +1,31 @@
 package com.emyiqing.core;
 
+import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.Set;
 
 public class OperandStack<T> {
-    private final LinkedList<T> stack;
+    private final LinkedList<Set<T>> stack;
 
     public OperandStack() {
         this.stack = new LinkedList<>();
     }
 
-    public void pop() {
-        stack.remove(stack.size() - 1);
+    public Set<T> pop() {
+        return stack.remove(stack.size() - 1);
     }
 
     public void push(T t) {
+        Set<T> set = new HashSet<>();
+        set.add(t);
+        stack.add(set);
+    }
+
+    public void push(){
+        stack.add(new HashSet<>());
+    }
+
+    public void push(Set<T> t) {
         stack.add(t);
     }
 
@@ -21,11 +33,29 @@ public class OperandStack<T> {
         stack.clear();
     }
 
-    public T get(int index) {
+    public Set<T> get(int index) {
         return stack.get(stack.size() - index - 1);
     }
 
-    public void set(int index, T t) {
+    public void set(int index, Set<T> t) {
         stack.set(stack.size() - index - 1, t);
+    }
+
+    public void set(int index, T t) {
+        Set<T> set = new HashSet<>();
+        set.add(t);
+        stack.set(stack.size() - index - 1, set);
+    }
+
+    public void add(Set<T> t){
+        this.stack.add(t);
+    }
+
+    public int size(){
+        return this.stack.size();
+    }
+
+    public void remove(int index){
+        this.stack.remove(index);
     }
 }

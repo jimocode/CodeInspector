@@ -102,11 +102,7 @@ public class JarUtil {
     private static void closeAll() {
         List<ClassFile> classFileList = new ArrayList<>(classFileSet);
         for (ClassFile classFile : classFileList) {
-            try {
-                classFile.getInputStream().close();
-            } catch (IOException e) {
-                logger.error("error ", e);
-            }
+            classFile.close();
         }
     }
 }
