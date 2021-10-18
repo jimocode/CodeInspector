@@ -1,6 +1,5 @@
 package com.emyiqing.service;
 
-import com.emyiqing.data.InheritanceMap;
 import com.emyiqing.model.ClassReference;
 
 import java.util.HashMap;

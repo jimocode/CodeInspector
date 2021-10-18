@@ -1,10 +1,11 @@
 package com.emyiqing.model;
 
+import java.io.Serializable;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
-public class ClassReference {
+public class ClassReference implements Serializable {
     private final String name;
     private final String superClass;
     private final List<String> interfaces;
@@ -12,7 +13,7 @@ public class ClassReference {
     private final List<Member> members;
     private final Set<String> annotations;
 
-    public static class Member {
+    public static class Member implements Serializable {
         private final String name;
         private final int modifiers;
         private final Handle type;
@@ -74,7 +75,7 @@ public class ClassReference {
         return annotations;
     }
 
-    public static class Handle {
+    public static class Handle implements Serializable {
         private final String name;
 
         public Handle(String name) {

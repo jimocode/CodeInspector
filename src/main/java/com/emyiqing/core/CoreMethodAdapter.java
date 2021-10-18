@@ -1,6 +1,6 @@
 package com.emyiqing.core;
 
-import com.emyiqing.data.InheritanceMap;
+import com.emyiqing.service.InheritanceMap;
 import com.emyiqing.model.ClassReference;
 import com.emyiqing.model.MethodReference;
 import org.objectweb.asm.*;

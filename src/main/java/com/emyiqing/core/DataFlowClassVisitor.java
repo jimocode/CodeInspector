@@ -1,6 +1,6 @@
 package com.emyiqing.core;
 
-import com.emyiqing.data.InheritanceMap;
+import com.emyiqing.service.InheritanceMap;
 import com.emyiqing.model.ClassReference;
 import com.emyiqing.model.MethodReference;
 import com.emyiqing.service.Decider;
@@ -19,7 +19,7 @@ public class DataFlowClassVisitor extends ClassVisitor {
     private final Map<MethodReference.Handle, Set<Integer>> passthroughDataflow;
 
     private String name;
-    private Decider decider;
+    private final Decider decider;
     private DataFlowMethodAdapter dataFlowMethodAdapter;
 
     public DataFlowClassVisitor(Map<ClassReference.Handle, ClassReference> classMap,

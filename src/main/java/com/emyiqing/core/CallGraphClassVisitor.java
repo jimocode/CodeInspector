@@ -1,6 +1,6 @@
 package com.emyiqing.core;
 
-import com.emyiqing.data.InheritanceMap;
+import com.emyiqing.service.InheritanceMap;
 import com.emyiqing.model.ClassReference;
 import com.emyiqing.model.MethodReference;
 import com.emyiqing.service.Decider;
@@ -9,7 +9,6 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.commons.JSRInlinerAdapter;
 
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 

@@ -1,10 +1,11 @@
-package com.emyiqing.data;
+package com.emyiqing.service;
 
 import com.emyiqing.model.ClassReference;
 
+import java.io.Serializable;
 import java.util.*;
 
-public class InheritanceMap {
+public class InheritanceMap implements Serializable {
     private final Map<ClassReference.Handle, Set<ClassReference.Handle>> inheritanceMap;
     private final Map<ClassReference.Handle, Set<ClassReference.Handle>> subClassMap;
 

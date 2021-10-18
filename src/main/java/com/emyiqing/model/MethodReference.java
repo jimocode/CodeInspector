@@ -1,8 +1,9 @@
 package com.emyiqing.model;
 
+import java.io.Serializable;
 import java.util.Objects;
 
-public class MethodReference {
+public class MethodReference implements Serializable {
     private final ClassReference.Handle classReference;
     private final String name;
     private final String desc;
@@ -36,7 +37,7 @@ public class MethodReference {
         return new Handle(classReference, name, desc);
     }
 
-    public static class Handle {
+    public static class Handle implements Serializable {
         private final ClassReference.Handle classReference;
         private final String name;
         private final String desc;
