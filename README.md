@@ -1,3 +1,3 @@
-# Gadget Finder
+# CodeInspector
 
-造轮子
+重构并简化GadgetInspector
