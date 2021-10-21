@@ -1,9 +1,8 @@
 package org.sec.model;
 
-import java.io.Serializable;
 import java.util.Objects;
 
-public class MethodReference implements Serializable {
+public class MethodReference {
     private final ClassReference.Handle classReference;
     private final String name;
     private final String desc;
@@ -37,7 +36,7 @@ public class MethodReference implements Serializable {
         return new Handle(classReference, name, desc);
     }
 
-    public static class Handle implements Serializable {
+    public static class Handle {
         private final ClassReference.Handle classReference;
         private final String name;
         private final String desc;

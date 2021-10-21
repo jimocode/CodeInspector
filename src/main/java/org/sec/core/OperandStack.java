@@ -5,6 +5,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
+@SuppressWarnings("all")
 public class OperandStack<T> {
     private final LinkedList<Set<T>> stack;
 

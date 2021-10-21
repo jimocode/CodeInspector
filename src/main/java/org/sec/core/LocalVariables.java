@@ -5,6 +5,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+@SuppressWarnings("all")
 public class LocalVariables<T> {
     private final ArrayList<Set<T>> array;
 

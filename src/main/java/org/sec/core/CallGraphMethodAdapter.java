@@ -12,6 +12,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+@SuppressWarnings("all")
 public class CallGraphMethodAdapter extends CoreMethodAdapter<String> {
     private final Map<ClassReference.Handle, ClassReference> classMap;
     private final Set<CallGraph> discoveredCalls;

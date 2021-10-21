@@ -9,6 +9,7 @@ import org.objectweb.asm.commons.JSRInlinerAdapter;
 import java.util.Map;
 import java.util.Set;
 
+@SuppressWarnings("all")
 public class MethodCallClassVisitor extends ClassVisitor {
     private final Map<MethodReference.Handle, Set<MethodReference.Handle>> methodCalls;
 

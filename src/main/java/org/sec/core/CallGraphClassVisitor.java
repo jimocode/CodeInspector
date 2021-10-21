@@ -11,6 +11,7 @@ import org.objectweb.asm.commons.JSRInlinerAdapter;
 import java.util.Map;
 import java.util.Set;
 
+@SuppressWarnings("all")
 public class CallGraphClassVisitor extends ClassVisitor {
     private final Set<CallGraph> discoveredCalls;
     private final Map<ClassReference.Handle, ClassReference> classMap;

@@ -8,6 +8,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+@SuppressWarnings("all")
 public class InheritanceUtil {
     public static InheritanceMap derive(Map<ClassReference.Handle, ClassReference> classMap) {
         Map<ClassReference.Handle, Set<ClassReference.Handle>> implicitInheritance = new HashMap<>();

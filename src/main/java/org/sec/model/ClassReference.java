@@ -1,11 +1,10 @@
 package org.sec.model;
 
-import java.io.Serializable;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
-public class ClassReference implements Serializable {
+public class ClassReference {
     private final String name;
     private final String superClass;
     private final List<String> interfaces;
@@ -13,7 +12,7 @@ public class ClassReference implements Serializable {
     private final List<Member> members;
     private final Set<String> annotations;
 
-    public static class Member implements Serializable {
+    public static class Member {
         private final String name;
         private final int modifiers;
         private final Handle type;
@@ -75,7 +74,7 @@ public class ClassReference implements Serializable {
         return annotations;
     }
 
-    public static class Handle implements Serializable {
+    public static class Handle {
         private final String name;
 
         public Handle(String name) {

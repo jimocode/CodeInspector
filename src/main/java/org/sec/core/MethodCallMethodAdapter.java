@@ -8,6 +8,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+@SuppressWarnings("all")
 public class MethodCallMethodAdapter extends MethodVisitor {
     private final Set<MethodReference.Handle> calledMethods;
 

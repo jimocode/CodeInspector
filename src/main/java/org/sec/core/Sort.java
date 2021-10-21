@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+@SuppressWarnings("all")
 public class Sort {
     public static void dfsSort(Map<MethodReference.Handle, Set<MethodReference.Handle>> outgoingReferences,
                                  List<MethodReference.Handle> sortedMethods, Set<MethodReference.Handle> visitedNodes,

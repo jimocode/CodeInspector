@@ -11,6 +11,7 @@ import org.objectweb.asm.commons.JSRInlinerAdapter;
 import java.util.Map;
 import java.util.Set;
 
+@SuppressWarnings("all")
 public class DataFlowClassVisitor extends ClassVisitor {
     Map<ClassReference.Handle, ClassReference> classMap;
     private final MethodReference.Handle methodToVisit;

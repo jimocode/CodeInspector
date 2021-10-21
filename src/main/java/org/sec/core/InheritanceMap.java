@@ -2,10 +2,10 @@ package org.sec.core;
 
 import org.sec.model.ClassReference;
 
-import java.io.Serializable;
 import java.util.*;
 
-public class InheritanceMap implements Serializable {
+@SuppressWarnings("all")
+public class InheritanceMap {
     private final Map<ClassReference.Handle, Set<ClassReference.Handle>> inheritanceMap;
     private final Map<ClassReference.Handle, Set<ClassReference.Handle>> subClassMap;
 

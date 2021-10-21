@@ -12,7 +12,6 @@ import org.sec.util.RtUtil;
 import org.apache.log4j.Logger;
 import org.sec.core.CallGraph;
 import org.sec.core.InheritanceMap;
-import org.sec.core.Source;
 import org.sec.service.*;
 
 import java.util.*;
@@ -33,12 +32,6 @@ public class Main {
     private static final Map<ClassReference.Handle, ClassReference> classMap = new HashMap<>();
     // 类名->类资源
     private static final Map<String, ClassFile> classFileByName = new HashMap<>();
-    // 所有的入口（漏洞触发点）
-    private static final List<Source> discoveredSources = new ArrayList<>();
-    // 方法->方法对象
-    private static final Map<MethodReference.Handle, MethodReference> methodMap = new HashMap<>();
-    // 方法->调用关系集合
-    private static final Map<MethodReference.Handle, Set<CallGraph>> graphCallMap = new HashMap<>();
 
     public static void main(String[] args) {
         Logo.PrintLogo();
@@ -73,10 +66,6 @@ public class Main {
         // 根据已有条件得到方法调用关系
         CallGraphService.start(inheritanceMap, discoveredCalls,
                 sortedMethods, classFileByName, classMap, dataFlow, decider);
-        // 根据已有条件得到入口信息
-        SourceService.start(inheritanceMap, methodMap, discoveredCalls, graphCallMap,
-                discoveredMethods, classMap, discoveredSources, decider);
-        // 最终构造利用链
-        GadgetChainService.start(inheritanceMap, methodMap);
+        System.out.println(1);
     }
 }
