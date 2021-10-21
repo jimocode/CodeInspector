@@ -3,7 +3,6 @@ package org.sec.service;
 import org.sec.core.CallGraph;
 import org.sec.core.CallGraphClassVisitor;
 import org.sec.core.InheritanceMap;
-import org.sec.decide.Decider;
 import org.sec.model.ClassFile;
 import org.sec.model.ClassReference;
 import org.sec.model.MethodReference;
@@ -24,8 +23,7 @@ public class CallGraphService {
                              List<MethodReference.Handle> sortedMethods,
                              Map<String, ClassFile> classFileByName,
                              Map<ClassReference.Handle, ClassReference> classMap,
-                             Map<MethodReference.Handle, Set<Integer>> dataflow,
-                             Decider decider) {
+                             Map<MethodReference.Handle, Set<Integer>> dataflow) {
         logger.info("build call graph");
         for (MethodReference.Handle method : sortedMethods) {
             ClassFile file = classFileByName.get(method.getClassReference().getName());
@@ -34,7 +32,7 @@ public class CallGraphService {
                 ClassReader cr = new ClassReader(ins);
                 ins.close();
                 CallGraphClassVisitor cv = new CallGraphClassVisitor(classMap, inheritanceMap,
-                        dataflow, decider, discoveredCalls);
+                        dataflow, discoveredCalls);
                 cr.accept(cv, ClassReader.EXPAND_FRAMES);
             } catch (IOException e) {
                 e.printStackTrace();

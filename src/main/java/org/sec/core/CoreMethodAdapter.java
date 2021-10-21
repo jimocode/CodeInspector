@@ -596,19 +596,6 @@ public class CoreMethodAdapter<T> extends MethodVisitor {
                 } else {
                     resultTaint = new HashSet<>();
                 }
-                if (owner.equals("java/io/ObjectInputStream") &&
-                        name.equals("defaultReadObject") && desc.equals("()V")) {
-                    localVariables.get(0).addAll(argTaint.get(0));
-                }
-                for (Object[] passthrough : PassThroughData.PASSTHROUGH_DATAFLOW) {
-                    if (passthrough[0].equals(owner) &&
-                            passthrough[1].equals(name) &&
-                            passthrough[2].equals(desc)) {
-                        for (int i = 3; i < passthrough.length; i++) {
-                            resultTaint.addAll(argTaint.get((Integer) passthrough[i]));
-                        }
-                    }
-                }
                 if (passthroughDataflow != null) {
                     Set<Integer> passthroughArgs = passthroughDataflow.get(methodHandle);
                     if (passthroughArgs != null) {

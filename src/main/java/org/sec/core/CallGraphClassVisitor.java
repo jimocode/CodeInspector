@@ -2,7 +2,6 @@ package org.sec.core;
 
 import org.sec.model.ClassReference;
 import org.sec.model.MethodReference;
-import org.sec.decide.Decider;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
@@ -17,7 +16,6 @@ public class CallGraphClassVisitor extends ClassVisitor {
     private final Map<ClassReference.Handle, ClassReference> classMap;
     private final InheritanceMap inheritanceMap;
     private final Map<MethodReference.Handle, Set<Integer>> passthroughDataflow;
-    private final Decider decider;
 
     private String name;
     private String signature;
@@ -27,13 +25,12 @@ public class CallGraphClassVisitor extends ClassVisitor {
     public CallGraphClassVisitor(Map<ClassReference.Handle, ClassReference> classMap,
                                  InheritanceMap inheritanceMap,
                                  Map<MethodReference.Handle, Set<Integer>> passthroughDataflow,
-                                 Decider decider,Set<CallGraph> discoveredCalls) {
+                                 Set<CallGraph> discoveredCalls) {
         super(Opcodes.ASM6);
         this.classMap = classMap;
         this.inheritanceMap = inheritanceMap;
         this.passthroughDataflow = passthroughDataflow;
         this.discoveredCalls = discoveredCalls;
-        this.decider = decider;
     }
 
     @Override
@@ -51,7 +48,7 @@ public class CallGraphClassVisitor extends ClassVisitor {
                                      String signature, String[] exceptions) {
         MethodVisitor mv = super.visitMethod(access, name, desc, signature, exceptions);
         CallGraphMethodAdapter modelGeneratorMethodVisitor = new CallGraphMethodAdapter(classMap,
-                inheritanceMap, passthroughDataflow, decider, api,discoveredCalls,
+                inheritanceMap, passthroughDataflow, api,discoveredCalls,
                 mv, this.name, access, name, desc, signature, exceptions);
         return new JSRInlinerAdapter(modelGeneratorMethodVisitor, access, name, desc, signature, exceptions);
     }

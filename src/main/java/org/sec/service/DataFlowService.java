@@ -2,7 +2,6 @@ package org.sec.service;
 
 import org.sec.core.DataFlowClassVisitor;
 import org.sec.core.InheritanceMap;
-import org.sec.decide.Decider;
 import org.sec.model.ClassFile;
 import org.sec.model.ClassReference;
 import org.sec.model.MethodReference;
@@ -22,8 +21,7 @@ public class DataFlowService {
                              List<MethodReference.Handle> sortedMethods,
                              Map<String, ClassFile> classFileByName,
                              Map<ClassReference.Handle, ClassReference> classMap,
-                             Map<MethodReference.Handle, Set<Integer>> dataflow,
-                             Decider decider) {
+                             Map<MethodReference.Handle, Set<Integer>> dataflow) {
         logger.info("get data flow");
         for (MethodReference.Handle method : sortedMethods) {
             if (method.getName().equals("<clinit>")) {
@@ -34,8 +32,7 @@ public class DataFlowService {
                 InputStream ins = file.getInputStream();
                 ClassReader cr = new ClassReader(ins);
                 ins.close();
-                DataFlowClassVisitor cv = new DataFlowClassVisitor(classMap, inheritanceMap,
-                        decider, dataflow, method);
+                DataFlowClassVisitor cv = new DataFlowClassVisitor(classMap, inheritanceMap, dataflow, method);
                 cr.accept(cv, ClassReader.EXPAND_FRAMES);
                 dataflow.put(method, cv.getReturnTaint());
             } catch (IOException e) {

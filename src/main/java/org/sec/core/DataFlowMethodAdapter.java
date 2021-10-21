@@ -2,7 +2,6 @@ package org.sec.core;
 
 import org.sec.model.ClassReference;
 import org.sec.model.MethodReference;
-import org.sec.decide.Decider;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
@@ -14,7 +13,6 @@ public class DataFlowMethodAdapter extends CoreMethodAdapter<Integer> {
 
     private final Map<ClassReference.Handle, ClassReference> classMap;
     private final InheritanceMap inheritanceMap;
-    private final Decider decider;
     private final Map<MethodReference.Handle, Set<Integer>> passthroughDataflow;
 
     private final int access;
@@ -22,7 +20,7 @@ public class DataFlowMethodAdapter extends CoreMethodAdapter<Integer> {
     private final Set<Integer> returnTaint;
 
     public DataFlowMethodAdapter(Map<ClassReference.Handle, ClassReference> classMap,
-                                 InheritanceMap inheritanceMap, Decider decider,
+                                 InheritanceMap inheritanceMap,
                                  Map<MethodReference.Handle, Set<Integer>> passthroughDataflow,
                                  MethodVisitor mv, String owner, int access, String name,
                                  String desc, String signature, String[] exceptions) {
@@ -33,24 +31,7 @@ public class DataFlowMethodAdapter extends CoreMethodAdapter<Integer> {
         this.passthroughDataflow = passthroughDataflow;
         this.access = access;
         this.desc = desc;
-        this.decider = decider;
         returnTaint = new HashSet<>();
-    }
-
-    private static boolean couldBeSerialized(Decider decider, InheritanceMap inheritanceMap,
-                                             ClassReference.Handle clazz) {
-        if (Boolean.TRUE.equals(decider.apply(clazz))) {
-            return true;
-        }
-        Set<ClassReference.Handle> subClasses = inheritanceMap.getSubClasses(clazz);
-        if (subClasses != null) {
-            for (ClassReference.Handle subClass : subClasses) {
-                if (Boolean.TRUE.equals(decider.apply(subClass))) {
-                    return true;
-                }
-            }
-        }
-        return false;
     }
 
     @Override
@@ -98,37 +79,7 @@ public class DataFlowMethodAdapter extends CoreMethodAdapter<Integer> {
             case Opcodes.PUTSTATIC:
                 break;
             case Opcodes.GETFIELD:
-                Type type = Type.getType(desc);
-                if (type.getSize() != 1) {
-                    break;
-                }
-                Boolean isTransient = null;
-                if (!couldBeSerialized(decider, inheritanceMap,
-                        new ClassReference.Handle(type.getInternalName()))) {
-                    isTransient = Boolean.TRUE;
-                } else {
-                    ClassReference clazz = classMap.get(new ClassReference.Handle(owner));
-                    while (clazz != null) {
-                        for (ClassReference.Member member : clazz.getMembers()) {
-                            if (member.getName().equals(name)) {
-                                isTransient = (member.getModifiers() & Opcodes.ACC_TRANSIENT) != 0;
-                                break;
-                            }
-                        }
-                        if (isTransient != null) {
-                            break;
-                        }
-                        clazz = classMap.get(new ClassReference.Handle(clazz.getSuperClass()));
-                    }
-                }
-
-                Set<Integer> taint;
-                if (!Boolean.TRUE.equals(isTransient)) {
-                    taint = operandStack.get(0);
-                } else {
-                    taint = new HashSet<>();
-                }
-
+                Set<Integer> taint = new HashSet<>();
                 super.visitFieldInsn(opcode, owner, name, desc);
                 operandStack.set(0, taint);
                 return;
@@ -137,7 +88,6 @@ public class DataFlowMethodAdapter extends CoreMethodAdapter<Integer> {
             default:
                 throw new IllegalStateException("unsupported opcode: " + opcode);
         }
-
         super.visitFieldInsn(opcode, owner, name, desc);
     }
 

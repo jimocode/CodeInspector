@@ -13,4 +13,7 @@ public class Command {
 
     @Parameter(names = {"-b", "--boot"}, description = "Scan SpringBoot File")
     public List<String> boots;
+
+    @Parameter(names = {"-p", "--pack"}, description = "SpringBoot Package Name")
+    public String packageName;
 }

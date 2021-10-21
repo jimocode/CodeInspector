@@ -21,6 +21,14 @@ public class CallGraph {
         this.targetArgIndex = targetArgIndex;
     }
 
+    public CallGraph(MethodReference.Handle callerMethod, MethodReference.Handle targetMethod){
+        this.callerMethod = callerMethod;
+        this.targetMethod = targetMethod;
+        this.callerArgIndex = -1;
+        this.callerArgPath = "";
+        this.targetArgIndex = -1;
+    }
+
     public MethodReference.Handle getCallerMethod() {
         return callerMethod;
     }

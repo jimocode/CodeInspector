@@ -1,19 +1,21 @@
 package org.sec;
 
 import com.beust.jcommander.JCommander;
+import org.checkerframework.checker.units.qual.C;
 import org.sec.config.Command;
 import org.sec.config.Logo;
-import org.sec.decide.Decider;
-import org.sec.decide.SimpleSerializableDecider;
+import org.sec.core.InheritanceUtil;
 import org.sec.model.ClassFile;
 import org.sec.model.ClassReference;
 import org.sec.model.MethodReference;
+import org.sec.util.DrawUtil;
 import org.sec.util.RtUtil;
 import org.apache.log4j.Logger;
 import org.sec.core.CallGraph;
 import org.sec.core.InheritanceMap;
 import org.sec.service.*;
 
+import java.nio.file.Paths;
 import java.util.*;
 
 public class Main {
@@ -42,14 +44,14 @@ public class Main {
         if (command.help) {
             jc.usage();
         }
-        if (command.jars != null && command.jars.size() != 0) {
-            start(command.jars);
+        if (command.boots != null && command.boots.size() != 0) {
+            start(command.boots, command.packageName);
         }
     }
 
-    private static void start(List<String> jars) {
+    private static void start(List<String> boots, String packageName) {
         // 读取JDK和输入Jar所有class资源
-        List<ClassFile> classFileList = RtUtil.getAllClassesFromJars(jars);
+        List<ClassFile> classFileList = RtUtil.getAllClassesFromBoot(boots);
         // 获取所有方法和类
         DiscoveryService.start(classFileList, discoveredClasses, discoveredMethods);
         // 根据已有方法和类得到继承关系
@@ -58,14 +60,45 @@ public class Main {
         MethodCallService.start(classFileList, methodCalls, classFileByName);
         // 对方法进行拓扑逆排序
         List<MethodReference.Handle> sortedMethods = SortService.start(methodCalls);
-        // 设置决策者
-        Decider decider = new SimpleSerializableDecider(inheritanceMap);
+        // 包名
+        String finalPackageName = packageName.replace(".", "/");
         // 分析方法返回值与哪些参数有关
         DataFlowService.start(inheritanceMap, sortedMethods,
-                classFileByName, classMap, dataFlow, decider);
+                classFileByName, classMap, dataFlow);
         // 根据已有条件得到方法调用关系
-        CallGraphService.start(inheritanceMap, discoveredCalls,
-                sortedMethods, classFileByName, classMap, dataFlow, decider);
-        System.out.println(1);
+        CallGraphService.start(inheritanceMap, discoveredCalls, sortedMethods, classFileByName, classMap, dataFlow);
+
+
+        Map<MethodReference.Handle, MethodReference> methodMap = new HashMap<>();
+        for (MethodReference methodReference : discoveredMethods) {
+            methodMap.put(methodReference.getHandle(), methodReference);
+        }
+        Map<ClassReference.Handle, Set<MethodReference.Handle>> methodsByClass = InheritanceUtil
+                .getMethodsByClass(methodMap);
+        Map<MethodReference.Handle, Set<MethodReference.Handle>> methodImplMap = InheritanceUtil
+                .getAllMethodImplementations(inheritanceMap, methodMap);
+
+        Set<CallGraph> targetCallGraphs = new HashSet<>();
+        for (CallGraph callGraph : discoveredCalls) {
+            ClassReference callerClass = classMap.get(callGraph.getCallerMethod().getClassReference());
+            ClassReference targetClass = classMap.get(callGraph.getTargetMethod().getClassReference());
+            if (targetClass == null) {
+                continue;
+            }
+            if (targetClass.getName().equals("java/lang/Object") &&
+                    callGraph.getTargetMethod().getName().equals("<init>") &&
+                    callGraph.getTargetMethod().getDesc().equals("()V")) {
+                continue;
+            }
+            if (callerClass.getName().startsWith(finalPackageName)) {
+                targetCallGraphs.add(callGraph);
+                if (targetClass.isInterface()) {
+                    for (MethodReference.Handle handle : methodImplMap.get(callGraph.getTargetMethod())) {
+                        targetCallGraphs.add(new CallGraph(callGraph.getTargetMethod(), handle));
+                    }
+                }
+            }
+        }
+        DrawUtil.drawCallGraph(targetCallGraphs);
     }
 }
