@@ -2,7 +2,7 @@ package org.sec.config;
 
 public class Logo {
     public static void PrintLogo() {
-        String logo ="   _____               ____        \n" +
+        String logo = "   _____               ____        \n" +
                 "  /  |  |____________ /_   | ____  \n" +
                 " /   |  |\\_  __ \\__  \\ |   |/    \\ \n" +
                 "/    ^   /|  | \\// __ \\|   |   |  \\\n" +

@@ -10,7 +10,7 @@ import java.net.URLClassLoader;
 import java.net.URLConnection;
 import java.util.*;
 
-@SuppressWarnings("UnstableApiUsage")
+@SuppressWarnings("all")
 public class RtUtil {
     private static final Logger logger = Logger.getLogger(RtUtil.class);
 

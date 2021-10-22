@@ -23,7 +23,7 @@ public class OperandStack<T> {
         stack.add(set);
     }
 
-    public void push(){
+    public void push() {
         stack.add(new HashSet<>());
     }
 
@@ -49,19 +49,19 @@ public class OperandStack<T> {
         stack.set(stack.size() - index - 1, set);
     }
 
-    public void add(Set<T> t){
+    public void add(Set<T> t) {
         this.stack.add(t);
     }
 
-    public int size(){
+    public int size() {
         return this.stack.size();
     }
 
-    public void remove(int index){
+    public void remove(int index) {
         this.stack.remove(index);
     }
 
-    public List<Set<T>> getList(){
+    public List<Set<T>> getList() {
         return this.stack;
     }
 }

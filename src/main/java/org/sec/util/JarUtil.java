@@ -10,6 +10,7 @@ import java.util.*;
 import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
 
+@SuppressWarnings("all")
 public class JarUtil {
     private static final Logger logger = Logger.getLogger(JarUtil.class);
     private static final Set<ClassFile> classFileSet = new HashSet<>();

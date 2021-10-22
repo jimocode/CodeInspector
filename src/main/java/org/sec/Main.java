@@ -68,7 +68,7 @@ public class Main {
         String finalPackageName = packageName.replace(".", "/");
         // 分析方法返回值与哪些参数有关
         DataFlowService.start(inheritanceMap, sortedMethods, classFileByName, classMap, dataFlow);
-        DataUtil.SaveDataFlows(dataFlow,methodMap);
+        DataUtil.SaveDataFlows(dataFlow, methodMap);
         // 根据已有条件得到方法调用关系
         CallGraphService.start(inheritanceMap, discoveredCalls, sortedMethods, classFileByName, classMap, dataFlow);
         DataUtil.SaveCallGraphs(discoveredCalls);
@@ -77,28 +77,7 @@ public class Main {
                 .getMethodsByClass(methodMap);
         Map<MethodReference.Handle, Set<MethodReference.Handle>> methodImplMap = InheritanceUtil
                 .getAllMethodImplementations(inheritanceMap, methodMap);
-
-        Set<CallGraph> targetCallGraphs = new HashSet<>();
-        for (CallGraph callGraph : discoveredCalls) {
-            ClassReference callerClass = classMap.get(callGraph.getCallerMethod().getClassReference());
-            ClassReference targetClass = classMap.get(callGraph.getTargetMethod().getClassReference());
-            if (targetClass == null) {
-                continue;
-            }
-            if (targetClass.getName().equals("java/lang/Object") &&
-                    callGraph.getTargetMethod().getName().equals("<init>") &&
-                    callGraph.getTargetMethod().getDesc().equals("()V")) {
-                continue;
-            }
-            if (callerClass.getName().startsWith(finalPackageName)) {
-                targetCallGraphs.add(callGraph);
-                if (targetClass.isInterface()) {
-                    for (MethodReference.Handle handle : methodImplMap.get(callGraph.getTargetMethod())) {
-                        targetCallGraphs.add(new CallGraph(callGraph.getTargetMethod(), handle));
-                    }
-                }
-            }
-        }
-        DrawUtil.drawCallGraph(targetCallGraphs);
+        // 画出指定package的调用图
+        DrawService.start(discoveredCalls, finalPackageName, classMap, methodImplMap);
     }
 }

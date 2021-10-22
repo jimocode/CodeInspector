@@ -34,7 +34,7 @@ public class MethodCallClassVisitor extends ClassVisitor {
         return name;
     }
 
-    public Map<MethodReference.Handle, Set<MethodReference.Handle>> getMethodCalls(){
+    public Map<MethodReference.Handle, Set<MethodReference.Handle>> getMethodCalls() {
         return this.methodCalls;
     }
 
@@ -43,7 +43,7 @@ public class MethodCallClassVisitor extends ClassVisitor {
                                      String signature, String[] exceptions) {
         MethodVisitor mv = super.visitMethod(access, name, desc, signature, exceptions);
         MethodCallMethodAdapter adapter = new MethodCallMethodAdapter(
-                api,this.methodCalls, mv, this.name, name, desc);
+                api, this.methodCalls, mv, this.name, name, desc);
         return new JSRInlinerAdapter(adapter, access, name, desc, signature, exceptions);
     }
 

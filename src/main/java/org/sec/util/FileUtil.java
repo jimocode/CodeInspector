@@ -59,7 +59,7 @@ public class FileUtil {
                             StandardCharsets.UTF_8));
             bw.write(output);
             bw.close();
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }

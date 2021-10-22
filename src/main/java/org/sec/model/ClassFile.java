@@ -45,7 +45,7 @@ public class ClassFile {
         return new ByteArrayInputStream(outputStream.toByteArray());
     }
 
-    public void close(){
+    public void close() {
         try {
             this.inputStream.close();
         } catch (IOException e) {

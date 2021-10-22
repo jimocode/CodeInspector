@@ -48,7 +48,7 @@ public class CallGraphClassVisitor extends ClassVisitor {
                                      String signature, String[] exceptions) {
         MethodVisitor mv = super.visitMethod(access, name, desc, signature, exceptions);
         CallGraphMethodAdapter modelGeneratorMethodVisitor = new CallGraphMethodAdapter(classMap,
-                inheritanceMap, passthroughDataflow, api,discoveredCalls,
+                inheritanceMap, passthroughDataflow, api, discoveredCalls,
                 mv, this.name, access, name, desc, signature, exceptions);
         return new JSRInlinerAdapter(modelGeneratorMethodVisitor, access, name, desc, signature, exceptions);
     }

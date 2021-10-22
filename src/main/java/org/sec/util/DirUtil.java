@@ -32,7 +32,7 @@ public class DirUtil {
         return filenames;
     }
 
-    public static boolean removeDir(File dir){
+    public static boolean removeDir(File dir) {
         if (dir.isDirectory()) {
             String[] children = dir.list();
             if (children != null) {

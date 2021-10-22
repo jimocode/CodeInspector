@@ -23,7 +23,7 @@ public class CallGraphMethodAdapter extends CoreMethodAdapter<String> {
     public CallGraphMethodAdapter(Map<ClassReference.Handle, ClassReference> classMap,
                                   InheritanceMap inheritanceMap,
                                   Map<MethodReference.Handle, Set<Integer>> passthroughDataflow,
-                                  final int api,Set<CallGraph> discoveredCalls,
+                                  final int api, Set<CallGraph> discoveredCalls,
                                   final MethodVisitor mv, final String owner, int access, String name, String desc,
                                   String signature, String[] exceptions) {
         super(inheritanceMap, passthroughDataflow, api, mv, owner, access, name, desc, signature, exceptions);
@@ -62,7 +62,7 @@ public class CallGraphMethodAdapter extends CoreMethodAdapter<String> {
     public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
         Type[] argTypes = Type.getArgumentTypes(desc);
         if (opcode != Opcodes.INVOKESTATIC) {
-            Type[] extendedArgTypes = new Type[argTypes.length+1];
+            Type[] extendedArgTypes = new Type[argTypes.length + 1];
             System.arraycopy(argTypes, 0, extendedArgTypes, 1, argTypes.length);
             extendedArgTypes[0] = Type.getObjectType(owner);
             argTypes = extendedArgTypes;
@@ -74,7 +74,7 @@ public class CallGraphMethodAdapter extends CoreMethodAdapter<String> {
             case Opcodes.INVOKEINTERFACE:
                 int stackIndex = 0;
                 for (int i = 0; i < argTypes.length; i++) {
-                    int argIndex = argTypes.length-1-i;
+                    int argIndex = argTypes.length - 1 - i;
                     Type type = argTypes[argIndex];
                     Set<String> taint = operandStack.get(stackIndex);
                     if (taint.size() > 0) {
@@ -90,7 +90,7 @@ public class CallGraphMethodAdapter extends CoreMethodAdapter<String> {
                                 srcArgPath = null;
                             } else {
                                 srcArgIndex = Integer.parseInt(argSrc.substring(3, dotIndex));
-                                srcArgPath = argSrc.substring(dotIndex+1);
+                                srcArgPath = argSrc.substring(dotIndex + 1);
                             }
                             discoveredCalls.add(new CallGraph(
                                     new MethodReference.Handle(

@@ -59,8 +59,9 @@ public class DataUtil {
                 Integer targetArgIndex = callGraph.getTargetArgIndex();
                 callGraphStr.append("caller:").append(callerClass).append(".")
                         .append(callerMethod).append("(").append(callerArgIndex).append(")")
-                        .append("\t").append("target:").append(targetClass).append(".")
-                        .append(targetMethod).append("(").append(targetArgIndex).append(")").append("\n");
+                        .append("\n").append("target:").append(targetClass).append(".")
+                        .append(targetMethod).append("(").append(targetArgIndex).append(")").append("\n")
+                        .append("--------------------------------------------------------------------\n");
             }
             FileUtil.writeFile(CallGraphFile, callGraphStr.toString());
         } catch (Exception e) {
