@@ -1,7 +1,6 @@
 package org.sec;
 
 import com.beust.jcommander.JCommander;
-import org.checkerframework.checker.units.qual.C;
 import org.sec.config.Command;
 import org.sec.config.Logo;
 import org.sec.core.InheritanceUtil;
@@ -15,7 +14,6 @@ import org.sec.core.CallGraph;
 import org.sec.core.InheritanceMap;
 import org.sec.service.*;
 
-import java.nio.file.Paths;
 import java.util.*;
 
 public class Main {
@@ -63,8 +61,7 @@ public class Main {
         // 包名
         String finalPackageName = packageName.replace(".", "/");
         // 分析方法返回值与哪些参数有关
-        DataFlowService.start(inheritanceMap, sortedMethods,
-                classFileByName, classMap, dataFlow);
+        DataFlowService.start(inheritanceMap, sortedMethods, classFileByName, classMap, dataFlow);
         // 根据已有条件得到方法调用关系
         CallGraphService.start(inheritanceMap, discoveredCalls, sortedMethods, classFileByName, classMap, dataFlow);
 

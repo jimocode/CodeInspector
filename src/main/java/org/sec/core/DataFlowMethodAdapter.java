@@ -73,21 +73,6 @@ public class DataFlowMethodAdapter extends CoreMethodAdapter<Integer> {
 
     @Override
     public void visitFieldInsn(int opcode, String owner, String name, String desc) {
-        switch (opcode) {
-            case Opcodes.GETSTATIC:
-                break;
-            case Opcodes.PUTSTATIC:
-                break;
-            case Opcodes.GETFIELD:
-                Set<Integer> taint = new HashSet<>();
-                super.visitFieldInsn(opcode, owner, name, desc);
-                operandStack.set(0, taint);
-                return;
-            case Opcodes.PUTFIELD:
-                break;
-            default:
-                throw new IllegalStateException("unsupported opcode: " + opcode);
-        }
         super.visitFieldInsn(opcode, owner, name, desc);
     }
 
