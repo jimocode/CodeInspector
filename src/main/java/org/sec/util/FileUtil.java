@@ -45,19 +45,23 @@ public class FileUtil {
         return new byte[0];
     }
 
-    public static void writeFile(String filename, String output) throws IOException {
-        File file = new File(filename);
-        if (!file.exists()) {
-            if (file.createNewFile()) {
-                logger.debug("create new output file");
+    public static void writeFile(String filename, String output) {
+        try {
+            File file = new File(filename);
+            if (!file.exists()) {
+                if (file.createNewFile()) {
+                    logger.debug("create new output file");
+                }
             }
+            BufferedWriter bw = new BufferedWriter(
+                    new OutputStreamWriter(
+                            new FileOutputStream(file),
+                            StandardCharsets.UTF_8));
+            bw.write(output);
+            bw.close();
+        }catch (Exception e){
+            e.printStackTrace();
         }
-        BufferedWriter bw = new BufferedWriter(
-                new OutputStreamWriter(
-                        new FileOutputStream(file),
-                        StandardCharsets.UTF_8));
-        bw.write(output);
-        bw.close();
     }
 
     public static String getFileExt(String filename) {
