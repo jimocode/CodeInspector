@@ -24,10 +24,11 @@ public class RtUtil {
         return new ArrayList<>(classFileSet);
     }
 
-    public static List<ClassFile> getAllClassesFromBoot(List<String> jarPathList) {
+    public static List<ClassFile> getAllClassesFromBoot(List<String> jarPathList,
+                                                        boolean useAllLib) {
         Set<ClassFile> classFileSet = new HashSet<>();
         for (String jarPath : jarPathList) {
-            classFileSet.addAll(JarUtil.resolveSpringBootJarFile(jarPath));
+            classFileSet.addAll(JarUtil.resolveSpringBootJarFile(jarPath, useAllLib));
         }
         classFileSet.addAll(getRuntimeClasses());
         return new ArrayList<>(classFileSet);

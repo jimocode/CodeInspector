@@ -4,19 +4,15 @@ import com.beust.jcommander.JCommander;
 import org.sec.config.Command;
 import org.sec.config.Logo;
 import org.sec.core.InheritanceUtil;
-import org.sec.model.ClassFile;
-import org.sec.model.ClassReference;
-import org.sec.model.MethodReference;
+import org.sec.model.*;
 import org.sec.util.DataUtil;
-import org.sec.util.DrawUtil;
-import org.sec.util.FileUtil;
 import org.sec.util.RtUtil;
 import org.apache.log4j.Logger;
 import org.sec.core.CallGraph;
 import org.sec.core.InheritanceMap;
 import org.sec.service.*;
 
-import javax.xml.crypto.Data;
+import java.nio.file.Paths;
 import java.util.*;
 
 public class Main {
@@ -37,6 +33,8 @@ public class Main {
     private static final Map<MethodReference.Handle, MethodReference> methodMap = new HashMap<>();
     // 类名->类资源
     private static final Map<String, ClassFile> classFileByName = new HashMap<>();
+    // 方法名->方法调用关系
+    private static final Map<MethodReference.Handle, Set<CallGraph>> graphCallMap = new HashMap<>();
 
     public static void main(String[] args) {
         Logo.PrintLogo();
@@ -54,29 +52,31 @@ public class Main {
 
     private static void start(List<String> boots, String packageName) {
         // 读取JDK和输入Jar所有class资源
-        List<ClassFile> classFileList = RtUtil.getAllClassesFromBoot(boots);
+        List<ClassFile> classFileList = RtUtil.getAllClassesFromBoot(boots,false);
         // 获取所有方法和类
         DiscoveryService.start(classFileList, discoveredClasses, discoveredMethods);
         // 根据已有方法和类得到继承关系
         InheritanceMap inheritanceMap = InheritanceService.start(discoveredClasses, discoveredMethods,
                 classMap, methodMap);
+        // 包名
+        String finalPackageName = packageName.replace(".", "/");
+        // 获取全部controller
+        List<SpringController> controllers = new ArrayList<>();
+        SpringService.start(classFileList, finalPackageName, controllers, classMap, methodMap);
         // 得到方法中的方法调用
         MethodCallService.start(classFileList, methodCalls, classFileByName);
         // 对方法进行拓扑逆排序
         List<MethodReference.Handle> sortedMethods = SortService.start(methodCalls);
-        // 包名
-        String finalPackageName = packageName.replace(".", "/");
         // 分析方法返回值与哪些参数有关
         DataFlowService.start(inheritanceMap, sortedMethods, classFileByName, classMap, dataFlow);
         DataUtil.SaveDataFlows(dataFlow, methodMap);
         // 根据已有条件得到方法调用关系
-        CallGraphService.start(inheritanceMap, discoveredCalls, sortedMethods, classFileByName, classMap, dataFlow);
+        CallGraphService.start(inheritanceMap, discoveredCalls, sortedMethods, classFileByName,
+                classMap, dataFlow,graphCallMap);
         DataUtil.SaveCallGraphs(discoveredCalls);
-
-        Map<ClassReference.Handle, Set<MethodReference.Handle>> methodsByClass = InheritanceUtil
-                .getMethodsByClass(methodMap);
         Map<MethodReference.Handle, Set<MethodReference.Handle>> methodImplMap = InheritanceUtil
                 .getAllMethodImplementations(inheritanceMap, methodMap);
+        ReflectionXssService.start(controllers,graphCallMap,methodMap);
         // 画出指定package的调用图
         DrawService.start(discoveredCalls, finalPackageName, classMap, methodImplMap);
     }

@@ -18,23 +18,20 @@ import static guru.nidi.graphviz.model.Factory.node;
 
 public class DrawUtil {
     public static void drawCallGraph(Set<CallGraph> targetCalls) {
-        System.out.println(targetCalls);
         try {
             List<Node> results = new ArrayList<>();
             for (CallGraph callGraph : targetCalls) {
                 Node tmp = node(getClassName(callGraph.getCallerMethod().getClassReference().getName()) +
-                        "\n" + callGraph.getCallerMethod().getName() +
-                        "\n" + callGraph.getCallerMethod().getDesc());
+                        "\n" + callGraph.getCallerMethod().getName());
                 tmp = tmp.link(node(getClassName(callGraph.getTargetMethod().getClassReference().getName()) +
-                        "\n" + callGraph.getTargetMethod().getName() +
-                        "\n" + callGraph.getCallerMethod().getDesc()));
+                        "\n" + callGraph.getTargetMethod().getName()));
                 results.add(tmp);
             }
-            Graph g = graph("example1").directed()
+            Graph g = graph("example").directed()
                     .graphAttr().with(Rank.dir(LEFT_TO_RIGHT))
                     .linkAttr().with("class", "link-class")
                     .with(results);
-            Graphviz.fromGraph(g).height(1000).render(Format.PNG).toFile(new File("example/ex1.png"));
+            Graphviz.fromGraph(g).height(1000).render(Format.PNG).toFile(new File("example/callgraph.png"));
         } catch (Exception e) {
             e.printStackTrace();
         }

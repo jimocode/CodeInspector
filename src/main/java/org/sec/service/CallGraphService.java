@@ -11,6 +11,7 @@ import org.objectweb.asm.ClassReader;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -23,7 +24,8 @@ public class CallGraphService {
                              List<MethodReference.Handle> sortedMethods,
                              Map<String, ClassFile> classFileByName,
                              Map<ClassReference.Handle, ClassReference> classMap,
-                             Map<MethodReference.Handle, Set<Integer>> dataflow) {
+                             Map<MethodReference.Handle, Set<Integer>> dataflow,
+                             Map<MethodReference.Handle, Set<CallGraph>> graphCallMap) {
         logger.info("build call graph");
         for (MethodReference.Handle method : sortedMethods) {
             ClassFile file = classFileByName.get(method.getClassReference().getName());
@@ -36,6 +38,16 @@ public class CallGraphService {
                 cr.accept(cv, ClassReader.EXPAND_FRAMES);
             } catch (IOException e) {
                 e.printStackTrace();
+            }
+        }
+        for (CallGraph graphCall : discoveredCalls) {
+            MethodReference.Handle caller = graphCall.getCallerMethod();
+            if (!graphCallMap.containsKey(caller)) {
+                Set<CallGraph> graphCalls = new HashSet<>();
+                graphCalls.add(graphCall);
+                graphCallMap.put(caller, graphCalls);
+            } else {
+                graphCallMap.get(caller).add(graphCall);
             }
         }
     }

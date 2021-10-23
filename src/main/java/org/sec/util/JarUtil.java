@@ -15,7 +15,7 @@ public class JarUtil {
     private static final Logger logger = Logger.getLogger(JarUtil.class);
     private static final Set<ClassFile> classFileSet = new HashSet<>();
 
-    public static List<ClassFile> resolveSpringBootJarFile(String jarPath) {
+    public static List<ClassFile> resolveSpringBootJarFile(String jarPath,boolean useAllLib) {
         try {
             final Path tmpDir = Files.createTempDirectory(UUID.randomUUID().toString());
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -24,9 +24,11 @@ public class JarUtil {
             }));
             resolve(jarPath, tmpDir);
             resolveBoot(jarPath, tmpDir);
-            Files.list(tmpDir.resolve("BOOT-INF/lib")).forEach(p -> {
-                resolveNormalJarFile(p.toFile().getAbsolutePath());
-            });
+            if(useAllLib){
+                Files.list(tmpDir.resolve("BOOT-INF/lib")).forEach(p -> {
+                    resolveNormalJarFile(p.toFile().getAbsolutePath());
+                });
+            }
             return new ArrayList<>(classFileSet);
         } catch (Exception e) {
             logger.error("error ", e);
