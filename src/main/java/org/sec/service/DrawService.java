@@ -27,11 +27,6 @@ public class DrawService {
             }
             if (callerClass.getName().startsWith(finalPackageName)) {
                 targetCallGraphs.add(callGraph);
-                if (targetClass.isInterface()) {
-                    for (MethodReference.Handle handle : methodImplMap.get(callGraph.getTargetMethod())) {
-                        targetCallGraphs.add(new CallGraph(callGraph.getTargetMethod(), handle));
-                    }
-                }
             }
         }
         DrawUtil.drawCallGraph(targetCallGraphs);
