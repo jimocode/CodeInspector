@@ -9,16 +9,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class XssMethodAdapter extends CoreMethodAdapter<Boolean> {
+public class SSRFMethodAdapter extends CoreMethodAdapter<Boolean> {
     private final int access;
     private final String desc;
     private int methodArgIndex;
     private List<Boolean> pass;
 
-    public XssMethodAdapter(int methodArgIndex, List<Boolean> pass, InheritanceMap inheritanceMap,
-                            Map<MethodReference.Handle, Set<Integer>> passthroughDataflow,
-                            int api, MethodVisitor mv, String owner, int access, String name,
-                            String desc, String signature, String[] exceptions) {
+    public SSRFMethodAdapter(int methodArgIndex, List<Boolean> pass, InheritanceMap inheritanceMap,
+                             Map<MethodReference.Handle, Set<Integer>> passthroughDataflow,
+                             int api, MethodVisitor mv, String owner, int access, String name,
+                             String desc, String signature, String[] exceptions) {
         super(inheritanceMap, passthroughDataflow, api, mv, owner, access, name, desc, signature, exceptions);
         this.access = access;
         this.desc = desc;
@@ -30,7 +30,7 @@ public class XssMethodAdapter extends CoreMethodAdapter<Boolean> {
     public void visitInsn(int opcode) {
         if (opcode == Opcodes.ARETURN) {
             if (operandStack.get(0).contains(true)) {
-                System.out.println(6);
+
             }
         }
         super.visitInsn(opcode);

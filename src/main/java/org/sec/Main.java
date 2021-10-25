@@ -75,7 +75,7 @@ public class Main {
         DataUtil.SaveCallGraphs(discoveredCalls);
         Map<MethodReference.Handle, Set<MethodReference.Handle>> methodImplMap = InheritanceUtil
                 .getAllMethodImplementations(inheritanceMap, methodMap);
-        XssService.start(classFileByName, controllers, inheritanceMap,
+        SSRFService.start(classFileByName, controllers, inheritanceMap,
                 dataFlow, graphCallMap, methodMap);
         // 画出指定package的调用图
         DrawService.start(discoveredCalls, finalPackageName, classMap, methodImplMap);

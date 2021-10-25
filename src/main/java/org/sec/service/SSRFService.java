@@ -5,7 +5,7 @@ import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.Type;
 import org.sec.core.CallGraph;
 import org.sec.core.InheritanceMap;
-import org.sec.core.XssClassVisitor;
+import org.sec.core.SSRFClassVisitor;
 import org.sec.model.*;
 
 import java.io.IOException;
@@ -15,8 +15,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class XssService {
-    private static final Logger logger = Logger.getLogger(XssService.class);
+public class SSRFService {
+    private static final Logger logger = Logger.getLogger(SSRFService.class);
 
     private static Map<MethodReference.Handle, Set<CallGraph>> allCalls;
     private static Map<String, ClassFile> classFileMap;
@@ -87,26 +87,24 @@ public class XssService {
             ClassReader cr = new ClassReader(ins);
             ins.close();
             System.out.println(targetMethod.getClassReference().getName() + "." + targetMethod.getName());
-            XssClassVisitor cv = new XssClassVisitor(
+            SSRFClassVisitor cv = new SSRFClassVisitor(
                     targetMethod, targetIndex, localInheritanceMap, localDataFlow);
             cr.accept(cv, ClassReader.EXPAND_FRAMES);
         } catch (IOException e) {
             e.printStackTrace();
+            return;
         }
-        Set<CallGraph> calls;
-        while ((calls = allCalls.get(targetMethod)) != null) {
-            if (calls.size() == 0) {
-                break;
-            }
-            for (CallGraph callGraph : calls) {
-                if (callGraph.getCallerArgIndex() == targetIndex) {
-                    if (visited.contains(callGraph.getTargetMethod())) {
-                        return;
-                    }
-                    doTask(callGraph.getTargetMethod(), callGraph.getTargetArgIndex(), visited);
+        Set<CallGraph> calls = allCalls.get(targetMethod);
+        if (calls == null || calls.size() == 0) {
+            return;
+        }
+        for (CallGraph callGraph : calls) {
+            if (callGraph.getCallerArgIndex() == targetIndex && targetIndex != -1) {
+                if (visited.contains(callGraph.getTargetMethod())) {
+                    return;
                 }
+                doTask(callGraph.getTargetMethod(), callGraph.getTargetArgIndex(), visited);
             }
         }
-
     }
 }

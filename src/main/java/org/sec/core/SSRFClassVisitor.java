@@ -12,7 +12,7 @@ import java.util.Map;
 import java.util.Set;
 
 @SuppressWarnings("all")
-public class XssClassVisitor extends ClassVisitor {
+public class SSRFClassVisitor extends ClassVisitor {
     private final InheritanceMap inheritanceMap;
     private final Map<MethodReference.Handle, Set<Integer>> dataFlow;
 
@@ -25,9 +25,9 @@ public class XssClassVisitor extends ClassVisitor {
     private int methodArgIndex;
     private List<Boolean> pass;
 
-    public XssClassVisitor(MethodReference.Handle targetMethod,
-                           int targetIndex, InheritanceMap inheritanceMap,
-                           Map<MethodReference.Handle, Set<Integer>> dataFlow) {
+    public SSRFClassVisitor(MethodReference.Handle targetMethod,
+                            int targetIndex, InheritanceMap inheritanceMap,
+                            Map<MethodReference.Handle, Set<Integer>> dataFlow) {
         super(Opcodes.ASM6);
         this.inheritanceMap = inheritanceMap;
         this.dataFlow = dataFlow;
@@ -51,12 +51,12 @@ public class XssClassVisitor extends ClassVisitor {
                                      String signature, String[] exceptions) {
         MethodVisitor mv = super.visitMethod(access, name, descriptor, signature, exceptions);
         if (name.equals(this.methodHandle.getName())) {
-            XssMethodAdapter xssMethodAdapter = new XssMethodAdapter(
-                    this.methodArgIndex,this.pass,
+            SSRFMethodAdapter ssrfMethodAdapter = new SSRFMethodAdapter(
+                    this.methodArgIndex, this.pass,
                     inheritanceMap, dataFlow, Opcodes.ASM6, mv,
                     this.name, access, name, descriptor, signature, exceptions
             );
-            return new JSRInlinerAdapter(xssMethodAdapter,
+            return new JSRInlinerAdapter(ssrfMethodAdapter,
                     access, name, descriptor, signature, exceptions);
         }
         return mv;
