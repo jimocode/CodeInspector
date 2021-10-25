@@ -4,9 +4,8 @@ import org.apache.log4j.Logger;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.Type;
 import org.sec.core.CallGraph;
-import org.sec.core.CallGraphClassVisitor;
 import org.sec.core.InheritanceMap;
-import org.sec.core.ReflectionXssClassVisitor;
+import org.sec.core.XssClassVisitor;
 import org.sec.model.*;
 
 import java.io.IOException;
@@ -16,8 +15,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class ReflectionXssService {
-    private static final Logger logger = Logger.getLogger(ReflectionXssService.class);
+public class XssService {
+    private static final Logger logger = Logger.getLogger(XssService.class);
 
     private static Map<MethodReference.Handle, Set<CallGraph>> allCalls;
     private static Map<String, ClassFile> classFileMap;
@@ -61,6 +60,9 @@ public class ReflectionXssService {
                 // mapping method中的call
                 for (CallGraph callGraph : calls) {
                     int callerIndex = callGraph.getCallerArgIndex();
+                    if (callerIndex == -1) {
+                        continue;
+                    }
                     // 如果callerIndex是可能xss的String类型
                     if (maybeXssIndex[callerIndex]) {
                         // 防止循环
@@ -84,10 +86,10 @@ public class ReflectionXssService {
             InputStream ins = file.getInputStream();
             ClassReader cr = new ClassReader(ins);
             ins.close();
-            System.out.println(targetMethod.getName());
-//            ReflectionXssClassVisitor cv = new ReflectionXssClassVisitor(
-//                    targetIndex,localInheritanceMap, localDataFlow);
-//            cr.accept(cv, ClassReader.EXPAND_FRAMES);
+            System.out.println(targetMethod.getClassReference().getName() + "." + targetMethod.getName());
+            XssClassVisitor cv = new XssClassVisitor(
+                    targetMethod, targetIndex, localInheritanceMap, localDataFlow);
+            cr.accept(cv, ClassReader.EXPAND_FRAMES);
         } catch (IOException e) {
             e.printStackTrace();
         }

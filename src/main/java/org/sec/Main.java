@@ -51,7 +51,7 @@ public class Main {
 
     private static void start(List<String> boots, String packageName) {
         // 读取JDK和输入Jar所有class资源
-        List<ClassFile> classFileList = RtUtil.getAllClassesFromBoot(boots,true);
+        List<ClassFile> classFileList = RtUtil.getAllClassesFromBoot(boots, true);
         // 获取所有方法和类
         DiscoveryService.start(classFileList, discoveredClasses, discoveredMethods);
         // 根据已有方法和类得到继承关系
@@ -71,12 +71,12 @@ public class Main {
         DataUtil.SaveDataFlows(dataFlow, methodMap);
         // 根据已有条件得到方法调用关系
         CallGraphService.start(inheritanceMap, discoveredCalls, sortedMethods, classFileByName,
-                classMap, dataFlow,graphCallMap,methodMap);
+                classMap, dataFlow, graphCallMap, methodMap);
         DataUtil.SaveCallGraphs(discoveredCalls);
         Map<MethodReference.Handle, Set<MethodReference.Handle>> methodImplMap = InheritanceUtil
                 .getAllMethodImplementations(inheritanceMap, methodMap);
-        ReflectionXssService.start(classFileByName,controllers,inheritanceMap,
-                dataFlow,graphCallMap,methodMap);
+        XssService.start(classFileByName, controllers, inheritanceMap,
+                dataFlow, graphCallMap, methodMap);
         // 画出指定package的调用图
         DrawService.start(discoveredCalls, finalPackageName, classMap, methodImplMap);
     }

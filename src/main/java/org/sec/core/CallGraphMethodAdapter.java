@@ -1,6 +1,7 @@
 package org.sec.core;
 
 
+import org.checkerframework.checker.units.qual.C;
 import org.sec.model.ClassReference;
 import org.sec.model.MethodReference;
 import org.objectweb.asm.MethodVisitor;
@@ -96,6 +97,13 @@ public class CallGraphMethodAdapter extends CoreMethodAdapter<String> {
                                     srcArgPath,
                                     argIndex));
                         }
+                    }else{
+                        discoveredCalls.add(new CallGraph(
+                                new MethodReference.Handle(
+                                        new ClassReference.Handle(this.owner), this.name, this.desc),
+                                new MethodReference.Handle(
+                                        new ClassReference.Handle(owner), name, desc)
+                        ));
                     }
                     stackIndex += type.getSize();
                 }
