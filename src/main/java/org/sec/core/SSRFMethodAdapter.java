@@ -12,8 +12,8 @@ import java.util.Set;
 public class SSRFMethodAdapter extends CoreMethodAdapter<Boolean> {
     private final int access;
     private final String desc;
-    private int methodArgIndex;
-    private List<Boolean> pass;
+    private final int methodArgIndex;
+    private final List<Boolean> pass;
 
     public SSRFMethodAdapter(int methodArgIndex, List<Boolean> pass, InheritanceMap inheritanceMap,
                              Map<MethodReference.Handle, Set<Integer>> passthroughDataflow,
@@ -24,16 +24,6 @@ public class SSRFMethodAdapter extends CoreMethodAdapter<Boolean> {
         this.desc = desc;
         this.methodArgIndex = methodArgIndex;
         this.pass = pass;
-    }
-
-    @Override
-    public void visitInsn(int opcode) {
-        if (opcode == Opcodes.ARETURN) {
-            if (operandStack.get(0).contains(true)) {
-
-            }
-        }
-        super.visitInsn(opcode);
     }
 
     @Override
@@ -55,26 +45,53 @@ public class SSRFMethodAdapter extends CoreMethodAdapter<Boolean> {
     }
 
     @Override
+    public void visitVarInsn(int opcode, int var) {
+        super.visitVarInsn(opcode, var);
+    }
+
+    @Override
     public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
-        if (opcode == Opcodes.INVOKESTATIC) {
-            if ((owner.equals("org/apache/commons/lang/StringEscapeUtils") &&
-                    (name.equals("escapeHtml") || name.equals("escapeJavaScript"))) ||
-                    (owner.equals("org/owasp/esapi/ESAPI") && name.equals("encodeForHTML"))) {
-                Type[] argTypes = Type.getArgumentTypes(desc);
-                int stackIndex = 0;
-                for (int i = 0; i < argTypes.length; i++) {
-                    int argIndex = argTypes.length - 1 - i;
-                    Type type = argTypes[argIndex];
-                    Set<Boolean> taint = operandStack.get(stackIndex);
-                    if (taint.size() > 0) {
-                        for (boolean arg : taint) {
-                            if (arg) {
-                                operandStack.set(stackIndex, false);
-                            }
-                        }
-                    }
-                    stackIndex += type.getSize();
+        boolean urlCondition = owner.equals("java/net/URL") && name.equals("<init>") &&
+                desc.equals("(Ljava/lang/String;)V");
+        boolean urlOpenCondition = owner.equals("java/net/URL") && name.equals("openConnection") &&
+                desc.equals("()Ljava/net/URLConnection;");
+        boolean urlInputCondition = owner.equals("java/net/HttpURLConnection") &&
+                name.equals("getInputStream") && desc.equals("()Ljava/io/InputStream;");
+
+        boolean isTaint = false;
+        Type[] argTypes = Type.getArgumentTypes(desc);
+
+        if (urlCondition) {
+            int stackIndex = 0;
+            for (int i = 0; i < argTypes.length; i++) {
+                int argIndex = argTypes.length - 1 - i;
+                Type type = argTypes[argIndex];
+                Set<Boolean> taint = operandStack.get(stackIndex);
+                if (taint.size() > 0 && taint.contains(true)) {
+                    isTaint = true;
+                    pass.add(true);
+                    break;
                 }
+                stackIndex += type.getSize();
+            }
+            super.visitMethodInsn(opcode, owner, name, desc, itf);
+            if (isTaint) {
+                operandStack.set(0, true);
+            }
+            return;
+        }
+        if (urlOpenCondition) {
+            if (operandStack.get(0).contains(true)) {
+                pass.add(true);
+                super.visitMethodInsn(opcode, owner, name, desc, itf);
+                operandStack.set(0, true);
+                return;
+            }
+        }
+        if (urlInputCondition) {
+            if (operandStack.get(0).contains(true)) {
+                pass.add(true);
+                return;
             }
         }
         super.visitMethodInsn(opcode, owner, name, desc, itf);

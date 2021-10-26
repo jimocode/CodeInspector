@@ -36,6 +36,10 @@ public class SSRFClassVisitor extends ClassVisitor {
         this.pass = new ArrayList<>();
     }
 
+    public List<Boolean> getPass() {
+        return pass;
+    }
+
     @Override
     public void visit(int version, int access, String name, String signature,
                       String superName, String[] interfaces) {

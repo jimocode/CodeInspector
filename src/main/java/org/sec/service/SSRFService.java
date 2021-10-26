@@ -22,7 +22,6 @@ public class SSRFService {
     private static Map<String, ClassFile> classFileMap;
     private static InheritanceMap localInheritanceMap;
     private static Map<MethodReference.Handle, Set<Integer>> localDataFlow;
-    private static Map<MethodReference.Handle, MethodReference> localMethodMap;
 
     public static void start(Map<String, ClassFile> classFileByName,
                              List<SpringController> controllers,
@@ -34,7 +33,6 @@ public class SSRFService {
         classFileMap = classFileByName;
         localInheritanceMap = inheritanceMap;
         localDataFlow = dataFlow;
-        localMethodMap = methodMap;
 
         logger.info("analysis reflection xss");
         for (SpringController controller : controllers) {
@@ -47,10 +45,10 @@ public class SSRFService {
                 Type[] extendedArgTypes = new Type[argTypes.length + 1];
                 System.arraycopy(argTypes, 0, extendedArgTypes, 1, argTypes.length);
                 argTypes = extendedArgTypes;
-                boolean[] maybeXssIndex = new boolean[argTypes.length];
+                boolean[] vulnerableIndex = new boolean[argTypes.length];
                 for (int i = 1; i < argTypes.length; i++) {
                     if (argTypes[i].getClassName().equals("java.lang.String")) {
-                        maybeXssIndex[i] = true;
+                        vulnerableIndex[i] = true;
                     }
                 }
                 Set<CallGraph> calls = allCalls.get(methodReference.getHandle());
@@ -63,8 +61,7 @@ public class SSRFService {
                     if (callerIndex == -1) {
                         continue;
                     }
-                    // 如果callerIndex是可能xss的String类型
-                    if (maybeXssIndex[callerIndex]) {
+                    if (vulnerableIndex[callerIndex]) {
                         // 防止循环
                         List<MethodReference.Handle> visited = new ArrayList<>();
                         doTask(callGraph.getTargetMethod(), callGraph.getTargetArgIndex(), visited);
@@ -86,10 +83,13 @@ public class SSRFService {
             InputStream ins = file.getInputStream();
             ClassReader cr = new ClassReader(ins);
             ins.close();
-            System.out.println(targetMethod.getClassReference().getName() + "." + targetMethod.getName());
             SSRFClassVisitor cv = new SSRFClassVisitor(
                     targetMethod, targetIndex, localInheritanceMap, localDataFlow);
             cr.accept(cv, ClassReader.EXPAND_FRAMES);
+            if (cv.getPass().size() == 3 && !cv.getPass().contains(false)) {
+                String message = targetMethod.getClassReference() + "." + targetMethod.getName();
+                logger.info("detect ssrf: " + message);
+            }
         } catch (IOException e) {
             e.printStackTrace();
             return;
