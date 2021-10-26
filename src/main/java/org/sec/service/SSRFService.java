@@ -34,7 +34,7 @@ public class SSRFService {
         localInheritanceMap = inheritanceMap;
         localDataFlow = dataFlow;
 
-        logger.info("analysis reflection xss");
+        logger.info("analysis ssrf...");
         for (SpringController controller : controllers) {
             for (SpringMapping mapping : controller.getMappings()) {
                 MethodReference methodReference = mapping.getMethodReference();
@@ -87,7 +87,7 @@ public class SSRFService {
                     targetMethod, targetIndex, localInheritanceMap, localDataFlow);
             cr.accept(cv, ClassReader.EXPAND_FRAMES);
             if (cv.getPass().size() == 3 && !cv.getPass().contains(false)) {
-                String message = targetMethod.getClassReference() + "." + targetMethod.getName();
+                String message = targetMethod.getClassReference().getName() + "." + targetMethod.getName();
                 logger.info("detect ssrf: " + message);
             }
         } catch (IOException e) {

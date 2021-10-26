@@ -45,11 +45,6 @@ public class SSRFMethodAdapter extends CoreMethodAdapter<Boolean> {
     }
 
     @Override
-    public void visitVarInsn(int opcode, int var) {
-        super.visitVarInsn(opcode, var);
-    }
-
-    @Override
     public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
         boolean urlCondition = owner.equals("java/net/URL") && name.equals("<init>") &&
                 desc.equals("(Ljava/lang/String;)V");
